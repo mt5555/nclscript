@@ -35,6 +35,8 @@ print("fnames = "+fnames)
 
 ; default is to read field specified.  but some fields, like
 ; SPEED, we read other variables and compute derived quantities like SPEED:
+longname = ""
+units = ""
 field_read=field
 compute_speed=False     
 compute_theta=False      
@@ -53,9 +55,9 @@ scale=1d0
 
 ; default is to plot level 18. especially for OMEGA
 ; override below if desired
-firstlev_read=18
-lastlev_read=18
-levinc=1
+firstlev_read=15
+lastlev_read=35
+levinc=10
 
 ; timelevels to plot:
 firsttime=0
@@ -64,10 +66,10 @@ timeinc=1
 
 
     ; US 
-    res@mpMinLatF = -30
-    res@mpMaxLatF = 50
-    res@mpMinLonF = -150
-    res@mpMaxLonF =  -80
+;    res@mpMinLatF = -30
+;    res@mpMaxLatF = 50
+;    res@mpMinLonF = -150
+;    res@mpMaxLonF =  -80
 
 
 ;     res@mpMinLatF = 20.
@@ -91,9 +93,10 @@ timeinc=1
 if (field .eq. "PRECT" ) then
 ; convert from m/s to mm/day
   scale=1000d0*(24*3600)
+  units="mm/day"
   res@cnLevelSelectionMode = "ManualLevels"
   res@cnMinLevelValF =  0.
-  res@cnMaxLevelValF = 10.
+  res@cnMaxLevelValF = 20.
   res@cnLevelSpacingF =  0.25
   if (.not.isfilevar(f[0],"PRECT")) then
     ; PRECT = PRECL + PRECC
@@ -208,6 +211,12 @@ if (field .eq. "OMEGA" )
   res@cnMinLevelValF = -5.
   res@cnMaxLevelValF = 5.
   res@cnLevelSpacingF = .25
+
+;; monthly means: APE near TOM Pa/s
+     res@cnMinLevelValF = -.02
+     res@cnMaxLevelValF = .02
+     res@cnLevelSpacingF = .02/20
+
 end if
 if (field .eq. "OMEGA500" ) 
   field = "OMEGA500"
@@ -225,9 +234,9 @@ if (field .eq. "OMEGA500" )
 ;    res@cnMinLevelValF = -1.0
 ;    res@cnMaxLevelValF = 1.0
 ;    res@cnLevelSpacingF = .05
-  res@cnMinLevelValF = -5.0
-  res@cnMaxLevelValF = 5.0
-  res@cnLevelSpacingF = .2
+;  res@cnMinLevelValF = -5.0
+;  res@cnMaxLevelValF = 5.0
+;  res@cnLevelSpacingF = .2
 end if
 if (field .eq. "DIV")
   res@cnLevelSelectionMode = "ManualLevels"
@@ -438,18 +447,31 @@ do n=firsttime,lasttime,timeinc
          lastlev=0
          var(0,:) = f[0]->$field_read$(n,firstlev_read,:)
       else
-        do k=firstlev_read,lastlev_read,levinc
+        firstlev=firstlev_read
+        lastlev=lastlev_read
+        do k=firstlev,lastlev,levinc
           print("read k="+k+" n="+n)
           var(k,:)=(f[0]->$field_read$(n,k,:))
         end do
       end if 
     end if
   end if
-  print("var min/max " + min(var(0,:)) + " " + max(var(0,:)) )
-  imin=minind(var(0,:))
-  print("minind="+minind(var(0,:))+" field(minind)="+var(0,imin))
-  print("minind lat/lon = "+lat1d(imin)+" " + lon1d(imin))
   var = var * scale
+  if (longname .ne. "") 
+    var@long_name = longname
+  end if
+  if (units .ne. "") 
+    var@units = units
+  end if
+  
+  do k=firstlev,lastlev,levinc
+      print("var min/max " + min(var(k,:)) + " " + max(var(k,:)) )
+     imin=minind(var(k,:))
+     print("minind="+minind(var(k,:))+" field(minind)="+var(k,imin))
+     print("minind lat/lon = "+lat1d(imin)+" " + lon1d(imin))
+  end do
+
+
 
   if (ndim .ge. 2) then
     hyam=(f[0]->hyam(:))
@@ -480,16 +502,7 @@ do n=firsttime,lasttime,timeinc
     contour = gsn_csm_contour_map(wks,var(k,:),res)     ; Draw a contour plot.
     print("Contour complete: "+res@tiMainString)
     print(" ")
-    
-    resp=True
-    do i=0,ntris-1
-    j0=trigrid(i,0)-1 ; convert to zero based for NCL arrays
-    j1=trigrid(i,1)-1 ; convert to zero based for NCL arrays
-    j2=trigrid(i,2)-1 ; convert to zero based for NCL arrays
-    
-    xlon=(/lon1d(j0),lon1d(j1),lon1d(j2),lon1d(j0)/)
-    xlat=(/lat1d(j0),lat1d(j1),lat1d(j2),lat1d(j0)/)
-    gsn_polyline(wks,contour,xlon,xlat,resp)
+    frame(wks)
   end do ;  loop over levels
 end do ; loop over time slices
 end
