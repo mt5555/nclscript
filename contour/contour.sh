@@ -1,7 +1,8 @@
-#!/bin/tcsh -f
+#!/bin/tcsh 
 #
 # example:  contour.sh    VOR250  files
 #
+set src = `dirname $0`
 set field = $1
 shift
 
@@ -9,10 +10,10 @@ set testfile = $1
 set ncols = `ncdump -h $testfile  | grep "ncol = " `
 if ( $status ) then
    echo "looks like lat/lon grid: running contour_latlon.ncl"
-   set cmd = ~/ncl/contour_latlon.ncl
+   set cmd = $src/contour_latlon.ncl
 else
    echo "looks like native grid: running contour_native.ncl"
-   set cmd = ~/ncl/contour_native.ncl
+   set cmd = $src/contour_native.ncl
 endif
 
 set files = "$*"
