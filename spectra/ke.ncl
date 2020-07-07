@@ -75,7 +75,7 @@ print ("Writing file "+gname+"."+output_format)
 
 ; NETCDF file containing U,V  or U250, V250
 fnames =  systemfunc( \
- "ls ./*.cam.h2.0001-??-??-00000.latlon.nc; " \
+ "ls ./*.cam.h2.0001-??-??-10800.latlon.nc; " \
 )
 if (any(ismissing(fnames))) then
    exit
@@ -132,15 +132,23 @@ else
       U3d="U"
       V3d="V"
    end if
+   usePSmean = True
    if (isfilevar(fuv_all[0],"PS")) then
-      usePSmean = False
-      print("using PS snapshots for interpolation to 250mb")
-   else
-      usePSmean = True
-      print("WARNING: USING PS=1000mb to interpolate to plvl")
+      sd=dimsizes(fuv_all[0]->PS)
+      if (sizeof(sd).eq.3) then
+         ; needs to be time, lat, lon
+         usePSmean = False
+      end if
    end if
 end if
 
+if (.not. hasUplev) then
+   if (usePSmean) then
+      print("WARNING: USING PS=1000mb to interpolate to plvl")
+   else
+      print("using PS for interpolation to 250mb")
+   end if
+end if
 
 f1=fuv_all[0]
 gauss_grid=get_gridtype(f1->lat)
