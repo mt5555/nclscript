@@ -72,10 +72,11 @@ print ("Writing file "+gname+"."+output_format)
 
 
 
-
+; "ls ./*.cam.h1.0001-??-??-00000.latlon.nc; " \
+ 
 ; NETCDF file containing U,V  or U250, V250
 fnames =  systemfunc( \
- "ls ./*.cam.h2.0001-??-??-10800.latlon.nc; " \
+ "ls ./*.cam.h2.0001-??-??-00000.latlon.nc; " \
 )
 if (any(ismissing(fnames))) then
    exit
@@ -95,8 +96,8 @@ if (isvar("plvl")) then         ; pressure level on command line?
 end if
 
 ; change the levels and or times to plot here
-firsttime=32d0
-lasttime=32d0
+firsttime=2d0
+lasttime=999d0
 timeinc=0.125d0
 
 if (isvar("t1")) then      
@@ -132,12 +133,23 @@ else
       U3d="U"
       V3d="V"
    end if
+   print("Computing spectra from: "+U3d+","+V3d)
    usePSmean = True
+   print("Looking for PS:")
    if (isfilevar(fuv_all[0],"PS")) then
       sd=dimsizes(fuv_all[0]->PS)
-      if (sizeof(sd).eq.3) then
+      if (dimsizes(sd).eq.3) then
          ; needs to be time, lat, lon
          usePSmean = False
+         PSname="PS"
+      end if
+   end if
+   if (isfilevar(fuv_all[0],"DYN_PS")) then
+      sd=dimsizes(fuv_all[0]->DYN_PS)
+      if (dimsizes(sd).eq.3) then
+         ; needs to be time, lat, lon
+         usePSmean = False
+         PSname="DYN_PS"
       end if
    end if
 end if
@@ -146,7 +158,7 @@ if (.not. hasUplev) then
    if (usePSmean) then
       print("WARNING: USING PS=1000mb to interpolate to plvl")
    else
-      print("using PS for interpolation to 250mb")
+      print("using "+PSname+" for interpolation to 250mb")
    end if
 end if
 
@@ -273,8 +285,8 @@ do time=firsttime,lasttime,timeinc
 	  ps = fuv->$U3d$(nuv,0,:,:)*0 + 100000
 	  ps@units="Pa"
 	else
-          ps = fuv->PS(nuv,:,:)
-          copyatt( ps, fuv->PS(nuv,:,:))
+          ps = fuv->$PSname$(nuv,:,:)
+          copyatt( ps, fuv->$PSname$(nuv,:,:))
         end if	    
         if ( "mb" .eq. ps@units) then
           print("converting ps to Pascals. orig units ="+ps@units)
