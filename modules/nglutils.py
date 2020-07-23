@@ -18,24 +18,28 @@ import Nio
 def myargs(argv):
     inputfile = ''
     scripfile = ''
+    gllfile = ''
     varname = ''
     name = argv[0]
     try:
-        opts, args = getopt.getopt(argv[1:],"i:s:")
+        opts, args = getopt.getopt(argv[1:],"i:s:g:")
     except getopt.GetoptError:
-        print (name,' -i <inputfile> -s <scriptfile> varname')
+        print (name,' -i inputfile [-s scriptfile] [-g gll_subcell_file ]  varname')
         sys.exit(2)
     for opt, arg in opts:
-        if opt in ("-i", "--ifile"):
+        if opt in ("-i"):
             inputfile = arg
-        elif opt in ("-s", "--sfile"):
+        elif opt in ("-s"):
             scripfile = arg
+        elif opt in ("-g"):
+            gllfile = arg
                 
-    return inputfile,scripfile,args
+    return inputfile,args,scripfile,gllfile
 
 
 
-def map_setup(wks_type,projection,lat,lon,scrip_file):
+def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,scrip_file):
+    
     cellbounds=False
     if os.path.isfile(scrip_file):
         infile = Nio.open_file(scrip_file,"r")
@@ -128,12 +132,10 @@ def map_setup(wks_type,projection,lat,lon,scrip_file):
     res.mpGridAndLimbOn      = False    # dont draw grid lines
     #res.mpShapeMode          = "FreeAspect"
     
-    return res
 
 
-
-def map_plot(wks,res,data2d,title):
-    res.tiMainString = "Vortex test field"
+    
+    res.tiMainString = title
     print("Title: ",res.tiMainString)
 
     longname=""
