@@ -18,8 +18,7 @@ import Nio
 #   projection      string denoting projection and region
 #                   ex: "latlon","US1","andes","oro", etc...
 #
-#   nlevels         number of contour intervales
-#   vmin,vmax       contour range
+#   [nlevels] or [vmin,vmax,nlevels]     contour bounds and number of contours 
 #   cmap            colormap 
 #
 #   scrip_file      option for NGL plots, user specified dual grid
@@ -61,8 +60,15 @@ def myargs(argv):
 
 
 
-def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,scrip_file):
+def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,clev,cmap,scrip_file):
     
+    if len(clev.shape)==1:
+        nlevels=clev[0]
+    else:
+        vmin=clev[0]
+        vmax=clev[1]
+        nelvels=clev[2]
+        
     cellbounds=False
     if os.path.isfile(scrip_file):
         infile = Nio.open_file(scrip_file,"r")
@@ -172,8 +178,8 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,scrip_file):
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res@cnLevelSpacingF)
     else:
-        print("contour levels: auto")
-        res.cnMaxLevelCount = 50
+        print("contour levels: auto. number of levels:",nlevels)
+        res.cnMaxLevelCount = nlevels
         
 
 
@@ -208,12 +214,18 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,scrip_file):
 
     
 
-def mpl_plot(data2d,lon,lat,proj,nlevels,cmap,gllfile):
+def mpl_plot(data2d,lon,lat,title,proj,clev,cmap,gllfile):
     
     # Setup the plot
     figure = pyplot.figure(figsize=(15, 10))
     dataproj=crs.PlateCarree()
-    
+
+    if len(clev.shape)==1:
+        nlevels=clev[0]
+    else:
+        vmin=clev[0]
+        vmax=clev[1]
+        nelvels=clev[2]
 
     if proj=="latlon":
         plotproj=crs.PlateCarree(central_longitude=0.0)
@@ -233,6 +245,11 @@ def mpl_plot(data2d,lon,lat,proj,nlevels,cmap,gllfile):
         ax.set_extent([50, 110, 0, 60],crs=dataproj)
     elif proj=="oro":
         plotproj=crs.Orthographic(central_longitude=-45.0, central_latitude=45.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
+    else:
+        print("Bad projection argument. assuming global lat/lon")
+        plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_global()
 
