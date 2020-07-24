@@ -130,15 +130,15 @@ fnames =  systemfunc("ls "+files);
      ;res@mpMaxLatF = 90.
      ;res@mpMinLonF = 295.-hdeg
      ;res@mpMaxLonF = 295. + hdeg
-     res@mpProjection      = "Orthographic"
-       res@mpCenterLatF      =  80.
-       res@mpCenterLonF         = 296.
+;     res@mpProjection      = "Orthographic"
+;       res@mpCenterLatF      =  80.
+;       res@mpCenterLonF         = 296.
 
-     res@mpLimitMode="Angles"
-       res@mpLeftAngleF=hdeg
-      res@mpRightAngleF=hdeg
-      res@mpBottomAngleF=hdeg
-      res@mpTopAngleF=hdeg
+;     res@mpLimitMode="Angles"
+;       res@mpLeftAngleF=hdeg
+;      res@mpRightAngleF=hdeg
+;      res@mpBottomAngleF=hdeg
+;      res@mpTopAngleF=hdeg
 
        
   end if
@@ -652,7 +652,9 @@ gauss_grid=get_gridtype(f1->lat)
 
     
     do k=firstlev,lastlev,levinc
-      print("ndim="+ndim+" k="+k+" eta="+(f1->hyam(k)+f1->hybm(k)))
+      if (isfilevar(f1,"hyam")) then
+         print("ndim="+ndim+" k="+k+" eta="+(f1->hyam(k)+f1->hybm(k)))
+      end if
 
       if(ndim.eq.2) then
         varmin = 1.e9
@@ -783,7 +785,7 @@ gauss_grid=get_gridtype(f1->lat)
 
        vector  = gsn_csm_vector(wks,f[0]->UBOT(n,:,:),f[0]->VBOT(n,:,:),res_vc)
        overlay(contour,vector)
-     endif 
+     end if 
      draw(contour)
      frame(wks)
 
