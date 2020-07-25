@@ -43,24 +43,64 @@ def myargs(argv):
     gllfile = ''
     varname = ''
     use_ngl = True
+    timeindex = None
+    levindex = None
+    pressurelev = None
+    clev = None
     name = argv[0]
     try:
-        opts, args = getopt.getopt(argv[1:],"i:s:g:t:")
+        opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:")
     except getopt.GetoptError:
-        print (name,' -i inputfile [-s scriptfile] [-g gll_subcell_file ] [-t ngl,mpl] varname')
+        print (name,' -i inputfile [options] varname')
+        print (name,' -t timeindex [default: last.   -1 = all times]')
+        print (name,' -k levindex  [default: 3*nlev/4]')
+        print (name,' -p pressure(mb)  interpolate to pressure level')
+        print (name,' -c nlevels  number of contour levels (ignored in MPL)')
+        print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
+        print (name,' -y ngl,mpl')
+        print (name,' -s scriptfile')
+        print (name,' -g gll_subcell_file')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-i"):
             inputfile = arg
         elif opt in ("-t"):
+            timeindex=int(arg)
+        elif opt in ("-k"):
+            levindex=int(arg)
+        elif opt in ("-p"):
+            pressurelev=numpy.array([float(arg)])
+        elif opt in ("-c"):
+            clev=[float(i) for i in arg.split(",")]
+        elif opt in ("-y"):
             if arg == "mpl": use_ngl=False
         elif opt in ("-s"):
             scripfile = arg
         elif opt in ("-g"):
             gllfile = arg
                 
-    return inputfile,args,use_ngl,scripfile,gllfile
+    return inputfile,args,timeindex,levindex,pressurelev,clev,use_ngl,scripfile,gllfile
 
+
+def extract_level(dataf,klev,plev,PS,hyam,hybm):
+    if klev != -1:
+        data2d=dataf[klev,...]
+    else:
+        # vertical interpolation
+        v_interp = 2   # type of interpolation: 1 = linear, 2 = log, 3 = loglog
+        extrap = True  # is extrapolation desired if data is outside the range of PS
+        P0mb = 1000    # ps in Pa, but this argument must be in mb
+
+        if len(dataf.shape)==2:   # lev,ncol
+            dataf2=numpy.expand_dims(dataf,axis=2)  # lev,ncol,1
+            PS2=numpy.expand_dims(PS,axis=1)        # ncol,1
+            data2d=numpy.squeeze(Ngl.vinth2p(dataf2,hyam,hybm,plev,PS2,v_interp,P0mb,1,extrap))
+        elif len(dataf.shape)==3:  # lev,lat,lon
+            data2d=numpy.squeeze(Ngl.vinth2p(dataf,hyam,hybm,plev,PS,v_interp,P0mb,1,extrap))
+        else:
+            print("ERROR: extract_level: dataf() needs to be 2 or 3 dimensiosn")
+
+    return data2d
 
 
 def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
@@ -76,6 +116,9 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
     
     res = Ngl.Resources()
 
+    if cmap!=None:
+        res.cnFillPalette   = cmap
+        
     if len(clev)==1:
         res.cnLevelSelectionMode  = "AutomaticLevels"
         res.cnMaxLevelCount = clev[0]
@@ -133,12 +176,6 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
     res.nglPointTickmarksOutward = True
     
     res.cnFillOn              = True           # Turn on contour fill.
-    #res.cnFillPalette         = "BlueYellowRed"  # good for symmetric data
-    #res.cnFillPalette         = 'MPL_viridis'
-    #res.cnFillPalette         = "wgne15"
-    #res.cnFillPalette         = "StepSeq25"
-    res.cnFillPalette         = "WhiteBlueGreenYellowRed"
-    #res.cnFillPalette         = "BlAqGrYeOrReVi200"
     res.cnLinesOn             = False          # Turn off contour lines
     res.cnLineLabelsOn        = False          # Turn off line labels.
     res.cnInfoLabelOn         = False          # Turn off info label.
@@ -159,7 +196,7 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
         res.gsnPaperOrientation   = "portrait"
 
     res.lbLabelAutoStride   = True         # Clean up labelbar labels.
-    res.lbLabelStride       = 10 
+    res.lbLabelStride       = 5
     res.lbBoxLinesOn        = False        # Turn of labelbar box lines.
     res.lbOrientation       = "horizontal"
     
@@ -174,14 +211,13 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
     res.tiMainString = title
     print("Title: ",res.tiMainString)
 
-
+    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
     if res.cnLevelSelectionMode == "ManualLevels":
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
     else:
         print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
         
-    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
 
     # for lat/lon plots, add cyclic point:
     res2=res
@@ -221,12 +257,15 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
     figure = pyplot.figure(figsize=(15, 10))
     dataproj=crs.PlateCarree()
 
+    # pcolor/tripcolor doesn't use nelvels or contour intervals
     if len(clev)==1:
-        nlevels=clev[0].astype(int)
+        vmin=None
+        vmax=None
+        nlevels=int(round(clev[0]))
     else:
         vmin=clev[0]
         vmax=clev[1]
-        nlevels=((clev[1]-clev[0])/clev[2] ).astype(int)
+        nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
 
     if proj=="latlon":
         plotproj=crs.PlateCarree(central_longitude=0.0)
@@ -281,7 +320,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
             compute_tri=False
 
 
-    
+    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
+    print("colormap min/max=",vmin,vmax)
     if struct:
         data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
         print("MPL plotting structured data (with added cyclic point)")
