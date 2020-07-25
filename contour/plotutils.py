@@ -42,33 +42,30 @@ def myargs(argv):
     scripfile = ''
     gllfile = ''
     varname = ''
+    use_ngl = True
     name = argv[0]
     try:
-        opts, args = getopt.getopt(argv[1:],"i:s:g:")
+        opts, args = getopt.getopt(argv[1:],"i:s:g:t:")
     except getopt.GetoptError:
-        print (name,' -i inputfile [-s scriptfile] [-g gll_subcell_file ]  varname')
+        print (name,' -i inputfile [-s scriptfile] [-g gll_subcell_file ] [-t ngl,mpl] varname')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-i"):
             inputfile = arg
+        elif opt in ("-t"):
+            if arg == "mpl": use_ngl=False
         elif opt in ("-s"):
             scripfile = arg
         elif opt in ("-g"):
             gllfile = arg
                 
-    return inputfile,args,scripfile,gllfile
+    return inputfile,args,use_ngl,scripfile,gllfile
 
 
 
-def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,clev,cmap,scrip_file):
+def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
+             projection,clev,cmap,scrip_file):
     
-    if len(clev.shape)==1:
-        nlevels=clev[0]
-    else:
-        vmin=clev[0]
-        vmax=clev[1]
-        nelvels=clev[2]
-        
     cellbounds=False
     if os.path.isfile(scrip_file):
         infile = Nio.open_file(scrip_file,"r")
@@ -76,9 +73,18 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,clev,cmap,scrip_file):
         clon  = infile.variables["grid_corner_lon"][:,:]
         if clon.shape[0] == len(lat):
             cellbounds=True
-            
     
     res = Ngl.Resources()
+
+    if len(clev)==1:
+        res.cnLevelSelectionMode  = "AutomaticLevels"
+        res.cnMaxLevelCount = clev[0]
+    else:
+        res.cnLevelSelectionMode  = "ManualLevels"
+        res.cnMinLevelValF=clev[0]
+        res.cnMaxLevelValF=clev[1]
+        res.cnLevelSpacingF=clev[2]
+
     if projection == "latlon" :
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "MaximalArea"
@@ -136,7 +142,6 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,clev,cmap,scrip_file):
     res.cnLinesOn             = False          # Turn off contour lines
     res.cnLineLabelsOn        = False          # Turn off line labels.
     res.cnInfoLabelOn         = False          # Turn off info label.
-    res.cnLevelSelectionMode  = "AutomaticLevels"
 
     if cellbounds:
         res.cnFillMode = 'CellFill'
@@ -146,7 +151,9 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,clev,cmap,scrip_file):
         res.cnFillMode            = "RasterFill"
         res.sfXArray = lon[:]
         res.sfYArray = lat[:]
-    
+
+    #res.sfCopyData = False
+        
     if wks_type == "pdf":
         res.gsnMaximize           = True        
         res.gsnPaperOrientation   = "portrait"
@@ -167,43 +174,37 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,clev,cmap,scrip_file):
     res.tiMainString = title
     print("Title: ",res.tiMainString)
 
-    longname=""
-    units=""
-    if hasattr(data2d,"long_name"):
-        longname=data2d.long_name
-    if hasattr(data2d,"units"):
-        units=data2d.units
 
     if res.cnLevelSelectionMode == "ManualLevels":
         print("contour levels: manual [",res.cnMinLevelValF,",",\
-              res.cnMaxLevelValF,"] spacing=",res@cnLevelSpacingF)
+              res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
     else:
-        print("contour levels: auto. number of levels:",nlevels)
-        res.cnMaxLevelCount = nlevels
+        print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
         
-
+    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
 
     # for lat/lon plots, add cyclic point:
     res2=res
     if hasattr(res,"sfXArray"):
         if len(res.sfXArray)*len(res.sfYArray) == numpy.prod(data2d.shape):
-            print("Detected structured data.  Adding cyclic point")
+            print("NGL structured data plot.  Adding cyclic point")
             data2d,lon2= Ngl.add_cyclic(data2d[:,:],res.sfXArray[:])
             res2.sfXArray=lon2
         else:
-            print("Unstructered plot with internal triangulation")
+            print("NGL unstructered plot with internal triangulation")
     elif hasattr(res,"sfXCellBounds"):
-        print("Unstructered plot with cell bounds")
+        print("NGL unstructered plot with cell bounds")
     else:
         print("Error with resource coordinate data")
             
     # plot:
     map = Ngl.contour_map(wks,data2d,res2)
+    print("Contour done.")
     del res2
         
     #-- write variable long_name and units to the plot
     txres = Ngl.Resources()
-    txres.txFontHeightF = 0.012
+    txres.txFontHeightF = 0.016
     Ngl.text_ndc(wks,longname,0.14,0.82,txres)
     Ngl.text_ndc(wks,units, 0.95,0.82,txres)
     del txres
@@ -214,18 +215,18 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,projection,clev,cmap,scrip_file):
 
     
 
-def mpl_plot(data2d,lon,lat,title,proj,clev,cmap,gllfile):
+def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
     
     # Setup the plot
     figure = pyplot.figure(figsize=(15, 10))
     dataproj=crs.PlateCarree()
 
-    if len(clev.shape)==1:
-        nlevels=clev[0]
+    if len(clev)==1:
+        nlevels=clev[0].astype(int)
     else:
         vmin=clev[0]
         vmax=clev[1]
-        nelvels=clev[2]
+        nlevels=((clev[1]-clev[0])/clev[2] ).astype(int)
 
     if proj=="latlon":
         plotproj=crs.PlateCarree(central_longitude=0.0)
@@ -254,7 +255,7 @@ def mpl_plot(data2d,lon,lat,title,proj,clev,cmap,gllfile):
         ax.set_global()
 
     ax.coastlines(linewidth=0.2)
-
+    
     # strucgtured lat/lon or unstructured data?
     struct=False
     if len(lon)*len(lat) == numpy.prod(data2d.shape): struct=True
@@ -282,11 +283,14 @@ def mpl_plot(data2d,lon,lat,title,proj,clev,cmap,gllfile):
 
     
     if struct:
-        print("Plotting structured data")
-        data2d_ext, lon2 = add_cyclic_point(data2d[:,:], coord=lon[:],axis=1)
-        pl=ax.contourf(lon2, lat, data2d_ext, nlevels,transform=dataproj, cmap=cmap)
+        data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
+        print("MPL plotting structured data (with added cyclic point)")
+        pl=ax.pcolormesh(lon2, lat, data2d_ext,vmin=vmin,vmax=vmax,
+                       transform=dataproj, cmap=cmap)
+        #pl=ax.contourf(lon2, lat, data2d_ext, nlevels,vmin=vmin,vmax=vmax,
+        #               transform=dataproj, cmap=cmap)
     elif compute_tri:
-        print("Plot using internal Delaunay triangulation")
+        print("MPL plot using internal Delaunay triangulation")
         # do the triangulation in the plot coordinates for better results
         tcoords = plotproj.transform_points(dataproj,lon[:],lat[:])
         # need to remove non-visible points
@@ -294,9 +298,10 @@ def mpl_plot(data2d,lon,lat,title,proj,clev,cmap,gllfile):
         tc=tcoords[xi,:]
         datai=data2d[:][xi]  # convert to numpy array, then subset
         
-        pl = ax.tripcolor(tc[:,0],tc[:,1], datai,shading='gouraud',cmap=cmap)
+        pl = ax.tripcolor(tc[:,0],tc[:,1], datai,vmin=vmin, vmax=vmax,
+                          shading='gouraud',cmap=cmap)
     else:
-        print("Using gll subcell triangulation")
+        print("MPL plot using gll subcell triangulation")
         # latlon->cartesian->local coords. this will put any seams at plot boundaries
         proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
         x3d = proj3d.transform_points(dataproj,lon[:],lat[:])
@@ -319,17 +324,12 @@ def mpl_plot(data2d,lon,lat,title,proj,clev,cmap,gllfile):
         print("triangle max lengths: ",gmin,gmax)
         mask = numpy.logical_or( dmax > 25*gmin, numpy.isnan(dmax))
         # gouraud shading requires we remove non-visable triangles
-        pl = ax.tripcolor(tcoords[:,0],tcoords[:,1],tri,data2d,mask=mask,shading='gouraud',cmap=cmap)
+        pl = ax.tripcolor(tcoords[:,0],tcoords[:,1],tri,data2d,vmin=vmin,vmax=vmax,
+                          mask=mask,shading='gouraud',cmap=cmap)
         # plot some of the triangles to make sure they are ok:
         #ax.triplot(tcoords[:,0],tcoords[:,1],tri[1:100,:],'go-')
         
     
-    longname=""
-    units=""
-    if hasattr(data2d,"longname"):
-        longname=data2d.longname
-    if hasattr(data2d,"units"):
-        units=data2d.units
     cb = pyplot.colorbar(pl, orientation='horizontal', 
                          label='%s (%s)'%(longname, units),shrink=0.75, pad=0.1)
 

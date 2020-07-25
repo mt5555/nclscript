@@ -8,7 +8,8 @@
 from __future__ import print_function
 import os, numpy
 import Nio, Ngl
-from plotutils import ngl_plot, myargs
+from plotutils import mpl_plot, ngl_plot, myargs
+from matplotlib import pyplot
 
 
 
@@ -16,7 +17,7 @@ klev=17   # plot level 17 i
 proj="latlon"
 use_ngl=True
 
-inname,varnames,scrip_file,gll_file = myargs(os.sys.argv)
+inname,varnames,use_ngl,scrip_file,gll_file = myargs(os.sys.argv)
 
 var1 = varnames[0]
 print('contour ',var1,' from ',inname)
@@ -35,11 +36,11 @@ if hasattr(dataf,"units"):
         
     
 if "ncol_d" in dataf.dimensions:
-    lat  = infile.variables["lat_d"]
-    lon  = infile.variables["lon_d"]
+    lat  = infile.variables["lat_d"][:]
+    lon  = infile.variables["lon_d"][:]
 else:
-    lat  = infile.variables["lat"]
-    lon  = infile.variables["lon"]
+    lat  = infile.variables["lat"][:]
+    lon  = infile.variables["lon"][:]
 
 
 
@@ -85,9 +86,9 @@ for t in range(ntimes):
     else:
         mpl_plot(data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,gll_file)
-        #pyplot.savefig("testplot.png",dpi=300)
+        pyplot.savefig("testplot.png",dpi=300)
         #pyplot.savefig("testplot.pdf",dpi=300)
-        pyplot.show()
+        #pyplot.show()
 
 if use_ngl:
     del wks
