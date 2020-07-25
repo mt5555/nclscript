@@ -48,8 +48,9 @@ def myargs(argv):
     pressurelev = None
     clev = None
     name = argv[0]
+    projection='latlon'
     try:
-        opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:")
+        opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:m:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
         print (name,' -t timeindex [default: last.   -1 = all times]')
@@ -57,6 +58,7 @@ def myargs(argv):
         print (name,' -p pressure(mb)  interpolate to pressure level')
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
+        print (name,' -m map projeciton  latlon,US1,oro,andes,hamalaya,etc...')
         print (name,' -y ngl,mpl')
         print (name,' -s scriptfile')
         print (name,' -g gll_subcell_file')
@@ -72,6 +74,8 @@ def myargs(argv):
             pressurelev=numpy.array([float(arg)])
         elif opt in ("-c"):
             clev=[float(i) for i in arg.split(",")]
+        elif opt in ("-m"):
+            projection=arg
         elif opt in ("-y"):
             if arg == "mpl": use_ngl=False
         elif opt in ("-s"):
@@ -79,7 +83,7 @@ def myargs(argv):
         elif opt in ("-g"):
             gllfile = arg
                 
-    return inputfile,args,timeindex,levindex,pressurelev,clev,use_ngl,scripfile,gllfile
+    return inputfile,args,projection,timeindex,levindex,pressurelev,clev,use_ngl,scripfile,gllfile
 
 
 def extract_level(dataf,klev,plev,PS,hyam,hybm):

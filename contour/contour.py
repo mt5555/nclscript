@@ -3,7 +3,7 @@
 # python contour_latlon.py
 #
 #
-# contourngl -i inputfile  [-s scripfile]  varname
+# contourngl -i inputfile  [options]  varname
 #
 from __future__ import print_function
 import os, numpy
@@ -12,14 +12,12 @@ from plotutils import mpl_plot, ngl_plot, myargs, extract_level
 from matplotlib import pyplot
 
 
-
-proj="latlon"
-
-inname,varnames,timeindex,klev,plev,clev,use_ngl,scrip_file,gll_file \
+inname,varnames,proj,timeindex,klev,plev,clev,use_ngl,scrip_file,gll_file \
     = myargs(os.sys.argv)
 
 var1 = varnames[0]
-print('contour ',var1,' from ',inname)
+print('file=',inname)
+print('contour:',var1,'proj=',proj)
 
 if clev==None:
     clev=[50]   # 50 levels, no range specified
