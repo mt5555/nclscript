@@ -16,8 +16,15 @@ inname,varnames,proj,timeindex,klev,plev,clev,use_ngl,scrip_file,gll_file \
     = myargs(os.sys.argv)
 
 var1 = varnames[0]
+var1_read=var1
+var2_read=None
+scale=None
+units=""
+longname=""
+
 print('file=',inname)
 print('contour:',var1,'proj=',proj)
+
 
 if clev==None:
     clev=[50]   # 50 levels, no range specified
@@ -35,19 +42,37 @@ if clev==None:
     if var1=="TMQ":
         clev=[0.,50.,.5]
 
-        
 
 infile = Nio.open_file(inname,"r")
-dataf  = infile.variables[var1]
+
+
+# special processing
+PRECT_from_LC=False
+if var1=="PRECT" and ~("PRECT" in infile.variables.keys()):
+    print("Special processing:  PRECT=PRECC+PRECL") 
+    PRECT_from_LC=True
+    var1_read="PRECL"
+    var2_read="PRECC"
+    longname="PRECT"
+
+if var1=="PRECT" or var1=="PRECC" or var1=="PRECL":     
+    scale=1000.0*(24*3600)  # convert to mm/day
+    units="mm/day"
+
+
+    
+dataf  = infile.variables[var1_read]
 print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
 
+if var2_read:
+    data2 = infile.variables[var2_read]
+
+
 title=var1
-longname=""
-units=""
-if hasattr(dataf,"long_name"):
+if longname=="" and hasattr(dataf,"long_name"):
     longname=dataf.long_name
     title=""
-if hasattr(dataf,"units"):
+if units=="" and hasattr(dataf,"units"):
     units=dataf.units
         
     
@@ -133,6 +158,9 @@ for t in range(t1,t2):
         data2d=extract_level(dataf[t,...],klev,plev,PS[t,...],hyam,hybm)
     elif (timedim):
         data2d=dataf[t,...]
+        if PRECT_from_LC:
+            data3d=data2d + data2[t,...]
+            longname="PRECT"
         print(t,"time=",times[t])
     elif (levdim):
         print("k=",klev,"/",nlev,"plev=",plev)
@@ -140,6 +168,9 @@ for t in range(t1,t2):
     else:
         data2d=dataf.values
 
+    if scale:
+        data2d=data2d*scale
+        
     if use_ngl:
         ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file)
