@@ -117,11 +117,11 @@ if plev == None:
     hyam=None
     hybm=None
 else:
-    print("Interpolating to pressure level = ",plev)
+    print("Interpolating to pressure level = ",plev,"using",PSname)
     klev=-1  # flag indicating interpolation
     PS=infile.variables[PSname]
     hyam=infile.variables['hyam']
-    hybm=infile.variables['hyam']
+    hybm=infile.variables['hybm']
     
             
 
