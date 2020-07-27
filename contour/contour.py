@@ -79,9 +79,11 @@ if units=="" and hasattr(dataf,"units"):
 if "ncol_d" in dataf.dimensions:
     lat  = infile.variables["lat_d"][:]
     lon  = infile.variables["lon_d"][:]
+    PSname = "DYN_PS"
 else:
     lat  = infile.variables["lat"][:]
     lon  = infile.variables["lon"][:]
+    PSname = "PS"
 
 
 if "lev" in dataf.dimensions:
@@ -117,7 +119,7 @@ if plev == None:
 else:
     print("Interpolating to pressure level = ",plev)
     klev=-1  # flag indicating interpolation
-    PS=infile.variables['DYN_PS']
+    PS=infile.variables[PSname]
     hyam=infile.variables['hyam']
     hybm=infile.variables['hyam']
     
