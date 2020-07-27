@@ -10,9 +10,10 @@ import os, numpy
 import Nio, Ngl
 from plotutils import mpl_plot, ngl_plot, myargs, extract_level
 from matplotlib import pyplot
+from scipy.interpolate import griddata
 
 
-inname,varnames,proj,timeindex,klev,plev,clev,use_ngl,scrip_file,gll_file \
+inname,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file \
     = myargs(os.sys.argv)
 
 var1 = varnames[0]
@@ -122,12 +123,12 @@ else:
     PS=infile.variables[PSname]
     hyam=infile.variables['hyam']
     hybm=infile.variables['hybm']
-    
-            
 
     
+
+wks_type = "pdf"
+    
 if use_ngl:
-    wks_type = "png"
     wks = Ngl.open_wks(wks_type,var1)
     cmap='MPL_viridis'
     #cmap="WhiteBlueGreenYellowRed"
@@ -141,7 +142,7 @@ if use_ngl:
 
 
 else:
-    outname=var1+".png"
+    outname=var1+"."+wks_type
     #cmap='nipy_spectral'
     #cmap='viridis'
     cmap='plasma'
@@ -172,9 +173,23 @@ for t in range(t1,t2):
 
     if scale:
         data2d=data2d*scale
-        
-    if use_ngl:
-        ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
+
+    # should we interpolate?
+    interp_to_latlon=False
+    if len(lon)*len(lat) != numpy.prod(data2d.shape):
+        if nlatlon_interp:
+            interp_to_latlon=True
+            print("Interpolating unstructured to: ",nlatlon_interp[0],"x",nlatlon_interp[1])
+
+    if interp_to_latlon:
+        # doesnt work well near poles and at lon=0 seam
+        lon_i = numpy.linspace(0, 360, nlatlon_interp[1],endpoint=False)  # to regrid to 1/2 degree
+        lat_i = numpy.linspace(-90, 90, nlatlon_interp[0])  # to regrid to 1/2 degree
+        data_i = griddata((lon, lat), data2d, (lon_i[None,:], lat_i[:,None]), method='linear')
+        ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
+                 proj,clev,cmap,scrip_file)
+    elif use_ngl:
+        ngl_plot(wks,data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file)
     else:
         mpl_plot(data2d,lon,lat,title,longname,units,

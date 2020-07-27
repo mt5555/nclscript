@@ -46,11 +46,12 @@ def myargs(argv):
     timeindex = None
     levindex = None
     pressurelev = None
+    nlatlon_interp=None
     clev = None
     name = argv[0]
     projection='latlon'
     try:
-        opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:m:")
+        opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:m:r:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
         print (name,' -t timeindex [default: last.   -1 = all times]')
@@ -59,6 +60,8 @@ def myargs(argv):
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
         print (name,' -m map projeciton  latlon,US1,oro,andes,hamalaya,etc...')
+        print (name,' -r 180x360  remap to lat/lon uni grid')
+        print (name,' -r 181x360  remap to lat/lon cap grid')
         print (name,' -y ngl,mpl')
         print (name,' -s scriptfile')
         print (name,' -g gll_subcell_file')
@@ -74,6 +77,8 @@ def myargs(argv):
             pressurelev=numpy.array([float(arg)])
         elif opt in ("-c"):
             clev=[float(i) for i in arg.split(",")]
+        elif opt in ("-r"):
+            nlatlon_interp=[int(i) for i in arg.split("x")]
         elif opt in ("-m"):
             projection=arg
         elif opt in ("-y"):
@@ -83,7 +88,8 @@ def myargs(argv):
         elif opt in ("-g"):
             gllfile = arg
                 
-    return inputfile,args,projection,timeindex,levindex,pressurelev,clev,use_ngl,scripfile,gllfile
+    return inputfile,args,projection,timeindex,levindex,pressurelev,clev,\
+        nlatlon_interp,use_ngl,scripfile,gllfile
 
 
 def extract_level(dataf,klev,plev,PS,hyam,hybm):
@@ -107,7 +113,7 @@ def extract_level(dataf,klev,plev,PS,hyam,hybm):
     return data2d
 
 
-def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
+def ngl_plot(wks,data2d,lon,lat,title,longname,units,
              projection,clev,cmap,scrip_file):
     
     cellbounds=False
@@ -194,13 +200,15 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
         res.sfYArray = lat[:]
 
     #res.sfCopyData = False
-        
-    if wks_type == "pdf":
-        res.gsnMaximize           = True        
-        res.gsnPaperOrientation   = "portrait"
+ 
+#    "not a valid resource in contour at this time...       
+#    if wks_type == "pdf":
+#        res.gsnMaximize           = True        
+#        res.gsnPaperOrientation   = "portrait"
 
     res.lbLabelAutoStride   = True         # Clean up labelbar labels.
-    res.lbLabelStride       = 5
+    #res.lbAutoManage = True
+    #res.lbLabelStride       = 10
     res.lbBoxLinesOn        = False        # Turn of labelbar box lines.
     res.lbOrientation       = "horizontal"
     
@@ -217,10 +225,16 @@ def ngl_plot(wks,wks_type,data2d,lon,lat,title,longname,units,
 
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
     if res.cnLevelSelectionMode == "ManualLevels":
+        nlevels=(res.cnMaxLevelValF-res.cnMinLevelValF)/res.cnLevelSpacingF
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
+        print("number of levels:",nlevels)
     else:
         print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
+        nlevels=res.cnMaxLevelCount
+
+    if nlevels>20:
+        res.lbLabelStride       = nlevels/8
         
 
     # for lat/lon plots, add cyclic point:
