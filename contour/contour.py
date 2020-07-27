@@ -183,8 +183,15 @@ for t in range(t1,t2):
 
     if interp_to_latlon:
         # doesnt work well near poles and at lon=0 seam
-        lon_i = numpy.linspace(0, 360, nlatlon_interp[1],endpoint=False)  # to regrid to 1/2 degree
-        lat_i = numpy.linspace(-90, 90, nlatlon_interp[0])  # to regrid to 1/2 degree
+        lon_i = numpy.linspace(0, 360, nlatlon_interp[1],endpoint=False)  
+        if nlatlon_interp[0] % 2 == 0:
+            #uni grid
+            dlat2=90./nlatlon_interp[0]
+            lat_i = numpy.linspace(-90+dlat2, 90-dlat2, nlatlon_interp[0])  
+        else:
+            # cap grid
+            lat_i = numpy.linspace(-90, 90, nlatlon_interp[0])  # to regrid to 1/2 degree
+        print(lat_i)
         data_i = griddata((lon, lat), data2d, (lon_i[None,:], lat_i[:,None]), method='linear')
         ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
                  proj,clev,cmap,scrip_file)
