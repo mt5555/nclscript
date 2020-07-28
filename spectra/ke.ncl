@@ -76,7 +76,7 @@ print ("Writing file "+gname+"."+output_format)
  
 ; NETCDF file containing U,V  or U250, V250
 fnames =  systemfunc( \
- "ls ./*.cam.h2.0001-??-??-00000.latlon.nc; " \
+ "ls ./*.cam.h2.0001-02-??-00000.latlon.nc; " \
 )
 if (any(ismissing(fnames))) then
    exit
@@ -143,6 +143,7 @@ else
          usePSmean = False
          PSname="PS"
       end if
+      delete(sd)
    end if
    if (isfilevar(fuv_all[0],"DYN_PS")) then
       sd=dimsizes(fuv_all[0]->DYN_PS)
@@ -151,6 +152,7 @@ else
          usePSmean = False
          PSname="DYN_PS"
       end if
+      delete(sd)
    end if
 end if
 
@@ -300,7 +302,8 @@ do time=firsttime,lasttime,timeinc
         interp = 2     ; type of interpolation: 1 = linear, 2 = log, 3 = loglog
         extrap = True  ; is extrapolation desired if data is outside the range of PS
         P0mb = 1000    ; ps in Pa, but this argument must be in mb
-        
+	
+	print ("Interpolating to pnew="+pnew+" ps min/max="+min(ps)+", "+max(ps))
         temp=vinth2p(fuv->$U3d$(nuv,:,:,:),hyam,hybm,pnew,ps,interp,P0mb,1,extrap)
 	var=temp(0,:,:)
         temp=vinth2p(fuv->$V3d$(nuv,:,:,:),hyam,hybm,pnew,ps,interp,P0mb,1,extrap)
