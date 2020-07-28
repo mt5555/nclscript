@@ -8,10 +8,8 @@
 from __future__ import print_function
 import os, numpy
 import Nio, Ngl
-from plotutils import mpl_plot, ngl_plot, myargs, extract_level
+from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon
 from matplotlib import pyplot
-from scipy.interpolate import griddata
-
 
 inname,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file \
     = myargs(os.sys.argv)
@@ -175,24 +173,19 @@ for t in range(t1,t2):
         data2d=data2d*scale
 
     # should we interpolate?
-    interp_to_latlon=False
-    if len(lon)*len(lat) != numpy.prod(data2d.shape):
-        if nlatlon_interp:
-            interp_to_latlon=True
-            print("Interpolating unstructured to: ",nlatlon_interp[0],"x",nlatlon_interp[1])
-
-    if interp_to_latlon:
-        # doesnt work well near poles and at lon=0 seam
-        lon_i = numpy.linspace(0, 360, nlatlon_interp[1],endpoint=False)  
-        if nlatlon_interp[0] % 2 == 0:
-            #uni grid
-            dlat2=90./nlatlon_interp[0]
-            lat_i = numpy.linspace(-90+dlat2, 90-dlat2, nlatlon_interp[0])  
+    if len(lon)*len(lat) != numpy.prod(data2d.shape) and nlatlon_interp:
+        nlat=nlatlon_interp[0]
+        nlon=nlatlon_interp[1]
+        lon_i = numpy.linspace(0, 360, nlon,endpoint=False)  
+        if nlat % 2 == 0:
+            dlat2=90./nlat
+            lat_i = numpy.linspace(-90+dlat2, 90-dlat2, nlat)  
+            print("Interpolating unstructured to: ",nlat,"x",nlon,"uni grid")
         else:
-            # cap grid
-            lat_i = numpy.linspace(-90, 90, nlatlon_interp[0])  # to regrid to 1/2 degree
-        print(lat_i)
-        data_i = griddata((lon, lat), data2d, (lon_i[None,:], lat_i[:,None]), method='linear')
+            lat_i = numpy.linspace(-90, 90, nlat)  # to regrid to 1/2 degree
+            print("Interpolating unstructured to: ",nlat,"x",nlon,"cap grid")
+            
+        data_i=interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
         ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
                  proj,clev,cmap,scrip_file)
     elif use_ngl:

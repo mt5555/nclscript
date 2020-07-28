@@ -4,6 +4,7 @@ import numpy, os, sys, getopt
 from cartopy import crs
 from cartopy.util import add_cyclic_point
 from matplotlib import pyplot
+from scipy.interpolate import griddata
 
 # needed for ngl_plot
 import Ngl
@@ -91,6 +92,33 @@ def myargs(argv):
     return inputfile,args,projection,timeindex,levindex,pressurelev,clev,\
         nlatlon_interp,use_ngl,scripfile,gllfile
 
+
+def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
+    # interpolating in lat/lon space has issues. interpolate in
+    # stereographic projection:
+    
+    nlat=len(lat_i)
+    nlon=len(lon_i)
+
+    # mesh grid
+    nhalf = int(nlat/2)
+    lat_south = lat_i[ :nhalf]
+    lat_north = lat_i[ nhalf:]
+    
+    xv,yv=numpy.meshgrid(lon_i,lat_south)
+    dproj=crs.PlateCarree()
+    coords_in  = crs.SouthPolarStereo().transform_points(dproj,lon,lat)
+    coords_out = crs.SouthPolarStereo().transform_points(dproj,xv.flatten(),yv.flatten())
+    data_s = griddata(coords_in[:,0:2], data2d, coords_out[:,0:2], method='linear')
+    
+    xv,yv=numpy.meshgrid(lon_i,lat_north)
+    coords_in  = crs.NorthPolarStereo().transform_points(dproj,lon,lat)
+    coords_out = crs.NorthPolarStereo().transform_points(dproj,xv.flatten(),yv.flatten())
+    data_n = griddata(coords_in[:,0:2], data2d, coords_out[:,0:2], method='linear')
+    
+    data_i=numpy.concatenate((data_s,data_n)).reshape(nlat,nlon)
+    return data_i
+    
 
 def extract_level(dataf,klev,plev,PS,hyam,hybm):
     if klev != -1:
