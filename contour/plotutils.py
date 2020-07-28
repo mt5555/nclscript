@@ -97,11 +97,8 @@ def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
     # interpolating in lat/lon space has issues. interpolate in
     # stereographic projection:
     
-    nlat=len(lat_i)
-    nlon=len(lon_i)
-
     # mesh grid
-    nhalf = int(nlat/2)
+    nhalf = int(len(lat_i)/2)
     lat_south = lat_i[ :nhalf]
     lat_north = lat_i[ nhalf:]
     
@@ -116,7 +113,7 @@ def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
     coords_out = crs.NorthPolarStereo().transform_points(dproj,xv.flatten(),yv.flatten())
     data_n = griddata(coords_in[:,0:2], data2d, coords_out[:,0:2], method='linear')
     
-    data_i=numpy.concatenate((data_s,data_n)).reshape(nlat,nlon)
+    data_i=numpy.concatenate((data_s,data_n)).reshape(len(lat_i),len(lon_i))
     return data_i
     
 
