@@ -96,6 +96,14 @@ def myargs(argv):
 def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
     # interpolating in lat/lon space has issues. interpolate in
     # stereographic projection:
+    #
+    # input:
+    #    unstructured 1D data:  data(ncol),lat(ncol),lon(ncol)
+    #    target lat/lon grid:   lon_i(nlon), lat_i(nlat)
+    #
+    # output 2D interpolated data::
+    #   data(nlon,nlat)
+    #
     
     # mesh grid
     nhalf = int(len(lat_i)/2)
