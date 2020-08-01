@@ -26,7 +26,7 @@ print('contour:',var1,'proj=',proj)
 
 
 if clev==None:
-    clev=[50]   # 50 levels, no range specified
+    clev=[40]   # 40 levels, no range specified
 
     if var1=="TBOT":
         clev=[160.,300.,5.]
@@ -40,7 +40,9 @@ if clev==None:
         clev=[-500.,55000.,1000.]
     if var1=="TMQ":
         clev=[0.,50.,.5]
-
+else:
+    if len(clev)==2:
+        clev.append((clev[1]-clev[0])/40)
 
 infile = Nio.open_file(inname,"r")
 
@@ -171,6 +173,8 @@ for t in range(t1,t2):
 
     if scale:
         data2d=data2d*scale
+
+    print("scaled data2d min/max=",numpy.amin(data2d),numpy.amax(data2d))
 
     # should we interpolate?
     if len(lon)*len(lat) != numpy.prod(data2d.shape) and nlatlon_interp:
