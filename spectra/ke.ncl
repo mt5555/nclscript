@@ -76,7 +76,7 @@ print ("Writing file "+gname+"."+output_format)
  
 ; NETCDF file containing U,V  or U250, V250
 fnames =  systemfunc( \
- "ls ./*.cam.h1.0031-??-??-?????.latlon.nc; " \
+ "ls ./*.cam.h1.0003-??-??-?????.latlon.nc; " \
 )
 if (any(ismissing(fnames))) then
    exit
