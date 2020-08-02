@@ -24,6 +24,7 @@ longname=""
 print('file=',inname)
 print('contour:',var1,'proj=',proj)
 
+outname=inname.split(".nc")[0] + "."+var1
 
 if clev==None:
     clev=[40]   # 40 levels, no range specified
@@ -129,7 +130,8 @@ else:
 wks_type = "pdf"
     
 if use_ngl:
-    wks = Ngl.open_wks(wks_type,var1)
+    wks = Ngl.open_wks(wks_type,outname)
+    print("output file: ",outname+"."+wks_type)
     cmap='MPL_viridis'
     #cmap="WhiteBlueGreenYellowRed"
     #cmap="wgne15"
@@ -142,7 +144,8 @@ if use_ngl:
 
 
 else:
-    outname=var1+"."+wks_type
+    outname=outname+"."+wks_type
+    print("output file: ",outname)
     #cmap='nipy_spectral'
     #cmap='viridis'
     cmap='plasma'

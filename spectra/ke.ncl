@@ -76,7 +76,7 @@ print ("Writing file "+gname+"."+output_format)
  
 ; NETCDF file containing U,V  or U250, V250
 fnames =  systemfunc( \
- "ls ./*.cam.h2.0001-02-??-00000.latlon.nc; " \
+ "ls ./*.cam.h1.0031-??-??-?????.latlon.nc; " \
 )
 if (any(ismissing(fnames))) then
    exit
@@ -98,7 +98,7 @@ end if
 ; change the levels and or times to plot here
 firsttime=2d0
 lasttime=999d0
-timeinc=0.125d0
+timeinc=0.5d0
 
 if (isvar("t1")) then      
   firsttime=t1
