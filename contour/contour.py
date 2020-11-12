@@ -172,7 +172,7 @@ for t in range(t1,t2):
         print("k=",klev,"/",nlev,"plev=",plev)
         data2d=extract_level(dataf[...],klev,plev,PS[...],hyam,hybm)
     else:
-        data2d=dataf.values
+        data2d=dataf[:]
 
     if scale:
         data2d=data2d*scale
