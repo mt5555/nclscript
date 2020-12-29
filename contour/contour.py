@@ -21,12 +21,16 @@ var2_read=None
 scale=None
 units=""
 longname=""
-
 print('file=',inname)
 print('contour:',var1,'proj=',proj)
-
+infile = Nio.open_file(inname,"r")
 outname=inname.split(".nc")[0] + "."+var1
 
+
+
+################################################################
+# custom contour levels for certain varaiables
+################################################################
 vrange=[]
 if var1=="dtheta_dp":
     vrange=[-.4,.2]
@@ -48,6 +52,8 @@ if clev==None:
         clev=[0.,50.,.5]
     if var1=="Th":
         clev=[200.,370.,10]
+    if var1=="POTT":
+        clev=[200.,370.,10]
     if var1=="dtheta_dp":
         clev=[-.1,.1,.005]
 
@@ -55,22 +61,26 @@ else:
     if len(clev)==2:
         clev.append((clev[1]-clev[0])/40)
 
-infile = Nio.open_file(inname,"r")
+
+################################################################
+# custom scalings for certain varaiables
+################################################################
+if var1=="PRECT" or var1=="PRECC" or var1=="PRECL":     
+    scale=1000.0*(24*3600)  # convert to mm/day
+    units="mm/day"
+
+
 
 ################################################################
 # special processing
 ################################################################
-PRECT_from_LC=False
+compute_prect=False
 if var1=="PRECT" and ~("PRECT" in infile.variables.keys()):
     print("Special processing:  PRECT=PRECC+PRECL") 
-    PRECT_from_LC=True
+    compute_prect=True
     var1_read="PRECL"
     PRECC = infile.variables["PRECC"]
     longname="PRECT"
-
-if var1=="PRECT" or var1=="PRECC" or var1=="PRECL":     
-    scale=1000.0*(24*3600)  # convert to mm/day
-    units="mm/day"
 
 compute_dtheta_dp=False
 if var1=="dtheta_dp":
@@ -79,14 +89,26 @@ if var1=="dtheta_dp":
     var1_read="Th"
     longname="dtheta/dp"
     units="K/Pa"
+    if plev != None:
+        print("d(theta)/dp processing only supported on model levels")
+        sys.exit(2)
 
+
+compute_pott=False
+if var1=="POTT":
+    print("Special processing:  POT TEMP") 
+    compute_pott=True
+    var1_read="T"
+    longname="potential temperature"
+    units="K"
+    if plev != None:
+        print("POT TEMP processing only supported on model levels")
+        sys.exit(2)
 
 
     
 dataf  = infile.variables[var1_read]
 print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
-
-
 
 
 title=var1
@@ -95,8 +117,10 @@ if longname=="" and hasattr(dataf,"long_name"):
     title=""
 if units=="" and hasattr(dataf,"units"):
     units=dataf.units
-        
-# does array have a time dimension?
+
+################################################################
+# time dimension and time values to plot
+################################################################
 timedim =  "time" in dataf.dimensions
 levdim = "lev" in dataf.dimensions
 ntimes=1
@@ -105,34 +129,19 @@ if timedim:
     ntimes = infile.dimensions['time']
     times = infile.variables["time"][:]
 
-
-#
-# get correct PS variable
-#
-ps=numpy.empty([ntimes,1])  # dummy array, wont be used, but needs to be indexed    
-if "ps" in infile.variables.keys():
-    ps0=1000*100
-    ps=infile.variables["ps"]
-
-if "ncol_d" in dataf.dimensions:
-    lat  = infile.variables["lat_d"][:]
-    lon  = infile.variables["lon_d"][:]
-    ps0=infile.variables["P0"].get_value()
-    PSname="DYN_PS"
-    ps=infile.variables["DYN_PS"]
-
+if timeindex==None or timeindex==-1:
+    t1=ntimes-1      # last timelevel
+    t2=ntimes
+elif timeindex==-2:
+    t1=0             # all timelevels
+    t2=ntimes
 else:
-    lat  = infile.variables["lat"][:]
-    lon  = infile.variables["lon"][:]
-    ps0=infile.variables["P0"].get_value()
-    PSname="PS"
-    ps=infile.variables["PS"]
+    t1=timeindex     # user specified index
+    t2=timeindex+1
 
-if plev != None:
-    print("Interpolating to pressure level = ",plev,"using",PSname)
-    klev=-1  # flag indicating interpolation
-
-
+################################################################
+# level varaibles
+################################################################
 nlev=0
 if "lev" in dataf.dimensions:
     nlev=infile.dimensions["lev"]
@@ -145,20 +154,32 @@ if "lev" in dataf.dimensions:
     hybi=infile.variables['hybi']
 
 
-        
 
+################################################################
+# get correct PS variable
+################################################################
+ps=numpy.empty([ntimes,1])  # dummy array, wont be used, but needs to be indexed    
+if "ps" in infile.variables.keys():
+    ps0=1000*100
+    ps=infile.variables["ps"]
 
-# default plot all times:
+if "P0" in infile.variables.keys():
+    ps0=infile.variables["P0"].get_value()
 
-if timeindex==None or timeindex==-1:
-    t1=ntimes-1      # last timelevel
-    t2=ntimes
-elif timeindex==-2:
-    t1=0             # all timelevels
-    t2=ntimes
+if "ncol_d" in dataf.dimensions:
+    lat  = infile.variables["lat_d"][:]
+    lon  = infile.variables["lon_d"][:]
+    PSname="DYN_PS"
+    ps=infile.variables["DYN_PS"]
 else:
-    t1=timeindex     # user specified index
-    t2=timeindex+1
+    lat  = infile.variables["lat"][:]
+    lon  = infile.variables["lon"][:]
+    PSname="PS"
+    if "PS" in infile.variables.keys():
+        ps=infile.variables["PS"]
+
+if plev != None:
+    print("Interpolating to pressure level = ",plev,"using",PSname)
 
 
 
@@ -202,15 +223,22 @@ for t in range(t1,t2):
     if (timedim and levdim):
         print(t+1,"time=",times[t],"k=",klev+1,"/",nlev,"plev=",plev)
         data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm)
+
         if compute_dtheta_dp:
             data2dm1=extract_level(dataf[t,...],klev-1,plev,ps[t,...],hyam,hybm)
             dp =  (hyam[klev]*ps0 + hybm[klev]*ps[t,...]) -  \
                 (hyam[klev-1]*ps0 + hybm[klev-1]*ps[t,...]) 
             data2d = (data2d - data2dm1)/dp
 
+        if compute_pott:
+            p =  hyam[klev]*ps0 + hybm[klev]*ps[t,...]
+            exner=(p/ps0)**.2856  # kappa
+            data2d=data2d/exner
+
+
     elif (timedim):
         data2d=dataf[t,...]
-        if PRECT_from_LC:
+        if compute_prect:
             data3d=data2d + PRECC[t,...]
             longname="PRECT"
         print(t,"time=",times[t])
@@ -256,10 +284,10 @@ for t in range(t1,t2):
         if nlat % 2 == 0:
             dlat2=90./nlat
             lat_i = numpy.linspace(-90+dlat2, 90-dlat2, nlat)  
-            print("Interpolating unstructured to: ",nlat,"x",nlon,"uni grid")
+            print("Interpolating unstructured to:",nlat,"x",nlon,"nlat x nlon uni grid")
         else:
             lat_i = numpy.linspace(-90, 90, nlat)  # to regrid to 1/2 degree
-            print("Interpolating unstructured to: ",nlat,"x",nlon,"cap grid")
+            print("Interpolating unstructured to:",nlat,"x",nlon,"nlat x nlon cap grid")
             
         data_i=interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
         ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
@@ -280,7 +308,7 @@ for t in range(t1,t2):
     # data2d[min_i1] will give value for either 1D or 2D data
     if levdim and nlev>0:
         ncols=len((min_i1,max_i1))
-        if var1=="Th":
+        if var1=="Th" or var1=="POTT":
             ncols=ncols*2  # add ref profile
         coldata_all=numpy.zeros([nlev,ncols])
         p_all=numpy.zeros([nlev,ncols])
@@ -314,12 +342,16 @@ for t in range(t1,t2):
                 coldata_i[nlev]=coldata[nlev-1]
                 coldata_i[1:nlev] = (coldata[0:nlev-1]+coldata[1:nlev])/2
                 coldata = (coldata_i[1:nlev+1]-coldata_i[0:nlev])/dp
-                
 
+            if compute_pott:
+                exner=(p/ps0)**.2856  # kappa
+                coldata=coldata/exner
+                
+                
             coldata_all[:,icols]=coldata
             p_all[:,icols]=p
             icols=icols+1
-            if var1=="Th":
+            if var1=="Th" or var1=="POTT":
                 exner=(p/ps0)**.2856  # kappa
                 coldata_all[:,icols]=97/exner + 191
                 p_all[:,icols]=p

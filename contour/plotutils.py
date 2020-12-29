@@ -144,7 +144,7 @@ def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
     
 
 def extract_level(dataf,klev,plev,PS,hyam,hybm):
-    if klev != -1:
+    if plev == None:
         data2d=dataf[klev,...]
     else:
         # vertical interpolation
