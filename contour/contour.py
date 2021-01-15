@@ -34,6 +34,9 @@ outname=inname.split(".nc")[0] + "."+var1
 vrange=[]
 if var1=="dtheta_dp":
     vrange=[-.4,.2]
+    vrange=[-.01,.002]
+if var1=="dt_dp":
+    vrange=[-.01,.002]
 
 if clev==None:
     clev=[40]   # 40 levels, no range specified
@@ -56,6 +59,8 @@ if clev==None:
         clev=[200.,370.,10]
     if var1=="dtheta_dp":
         clev=[-.1,.1,.005]
+    #if var1=="dt_dp":
+    #    clev=[-.002,.002,.0001]
 
 else:
     if len(clev)==2:
@@ -91,6 +96,18 @@ if var1=="dtheta_dp":
     units="K/Pa"
     if plev != None:
         print("d(theta)/dp processing only supported on model levels")
+        sys.exit(2)
+
+
+compute_dt_dp=False
+if var1=="dt_dp":
+    print("Special processing:  dT/dp") 
+    compute_dt_dp=True
+    var1_read="T"
+    longname="dT/dp"
+    units="K/Pa"
+    if plev != None:
+        print("dT/dp processing only supported on model levels")
         sys.exit(2)
 
 
@@ -224,7 +241,7 @@ for t in range(t1,t2):
         print(t+1,"time=",times[t],"k=",klev+1,"/",nlev,"plev=",plev)
         data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm)
 
-        if compute_dtheta_dp:
+        if compute_dtheta_dp or compute_dt_dp:
             data2dm1=extract_level(dataf[t,...],klev-1,plev,ps[t,...],hyam,hybm)
             dp =  (hyam[klev]*ps0 + hybm[klev]*ps[t,...]) -  \
                 (hyam[klev-1]*ps0 + hybm[klev-1]*ps[t,...]) 
@@ -334,7 +351,7 @@ for t in range(t1,t2):
                 p =  hyam[:]*ps0 + hybm[:]*ps[t,idx[0]]
                 p_i= hyai[:]*ps0 + hybi[:]*ps[t,idx[0]]
 
-            if compute_dtheta_dp:
+            if compute_dtheta_dp or compute_dt_dp:
                 dp = p_i[1:nlev+1]-p_i[0:nlev]
                 # compute d/dp
                 coldata_i=p_i
