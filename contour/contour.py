@@ -326,7 +326,7 @@ for t in range(t1,t2):
     if levdim and nlev>0:
         ncols=len((min_i1,max_i1))
         if var1=="Th" or var1=="POTT":
-            ncols=ncols*2  # add ref profile
+            ncols=ncols*3  # add ref profile
         coldata_all=numpy.zeros([nlev,ncols])
         p_all=numpy.zeros([nlev,ncols])
         icols=0
@@ -370,7 +370,10 @@ for t in range(t1,t2):
             icols=icols+1
             if var1=="Th" or var1=="POTT":
                 exner=(p/ps0)**.2856  # kappa
-                coldata_all[:,icols]=97/exner + 191
+                coldata_all[:,icols]=97/exner + 191   # ECMWF
+                p_all[:,icols]=p
+                icols=icols+1
+                coldata_all[:,icols]=300*exner**(0.67-1)  # Shar
                 p_all[:,icols]=p
                 icols=icols+1
 
