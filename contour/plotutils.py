@@ -203,6 +203,13 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 15.
         res.mpMinLonF = -100.
         res.mpMaxLonF =  -40.
+    elif projection == "andes2":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = -10.
+        res.mpMaxLatF = 15.
+        res.mpMinLonF = -85.
+        res.mpMaxLonF =  -60.
     elif projection == "himalaya":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
