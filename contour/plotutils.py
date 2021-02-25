@@ -55,8 +55,8 @@ def myargs(argv):
         opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:m:r:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
-        print (name,' -t timeindex [default: last.   -1 = all times]')
-        print (name,' -k levindex  [default: 3*nlev/4]')
+        print (name,' -t timeindex starting at 1 [0=default-all times. -1=last time]')
+        print (name,' -k levindex starting at 1  [default: 3*nlev/4]')
         print (name,' -p pressure(mb)  interpolate to pressure level')
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax       contour level min,max with 40 levels')
@@ -73,8 +73,15 @@ def myargs(argv):
             inputfile = arg
         elif opt in ("-t"):
             timeindex=int(arg)
+            timeindex=timeindex-1  # convert to zero-indexing
+            # 1-index  zero-index: -2 = last data
+            #  -1        -2          all data 
+            #  0         -1          last frame
+            #  1..N      0..N-1      specific fame
         elif opt in ("-k"):
             levindex=int(arg)
+            if levindex>0:
+                levindex=levindex -1   # convert to zero-indexing
         elif opt in ("-p"):
             pressurelev=numpy.array([float(arg)])
         elif opt in ("-c"):
@@ -137,7 +144,7 @@ def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
     
 
 def extract_level(dataf,klev,plev,PS,hyam,hybm):
-    if klev != -1:
+    if plev == None:
         data2d=dataf[klev,...]
     else:
         # vertical interpolation
@@ -229,6 +236,23 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpRightAngleF=hdeg
         res.mpBottomAngleF=hdeg
         res.mpTopAngleF=hdeg
+    elif projection == "debug1":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = 30.
+        res.mpMaxLatF = 50.
+        res.mpMinLonF = 85.
+        res.mpMaxLonF = 105.
+    elif projection == "debug2":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = -10.
+        res.mpMaxLatF = 75.
+        res.mpMinLonF = 45.
+        res.mpMaxLonF = 175.
+    else:
+        print("Bad projection argument: ",projection)
+        sys.exit(3)
 
         
     res.nglFrame = False # Don't advance frame.
@@ -246,7 +270,9 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.sfXCellBounds = clon
         res.sfYCellBounds = clat
     else:
+        #res.cnFillMode            = "AreaFill"
         res.cnFillMode            = "RasterFill"
+        res.cnRasterSmoothingOn = True
         res.sfXArray = lon[:]
         res.sfYArray = lat[:]
 
@@ -279,7 +305,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         nlevels=(res.cnMaxLevelValF-res.cnMinLevelValF)/res.cnLevelSpacingF
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
-        print("number of levels:",nlevels)
+        print("number of contour levels:",nlevels)
     else:
         print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
         nlevels=res.cnMaxLevelCount
@@ -357,10 +383,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
         ax = pyplot.axes(projection=plotproj)
         ax.set_global()
     else:
-        print("Bad projection argument. assuming global lat/lon")
-        plotproj=crs.PlateCarree(central_longitude=0.0)
-        ax = pyplot.axes(projection=plotproj)
-        ax.set_global()
+        print("Bad projection argument: ",projection)
+        sys.exit(3)
 
     ax.coastlines(linewidth=0.2)
     
