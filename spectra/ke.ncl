@@ -75,16 +75,24 @@ print ("Writing file "+gname+"."+output_format)
 ; "ls ./*.cam.h1.0001-??-??-00000.latlon.nc; " \
  
 ; NETCDF file containing U,V  or U250, V250
-fnames =  systemfunc( \
- "ls ./*.cam.h1.0002-??-??-?????.latlon.nc; " \
+fnamesU =  systemfunc( \
+ "ls ./*.h6.*-1?-*.interp1.nc; " \
 )
-if (any(ismissing(fnames))) then
+fnamesV =  systemfunc( \
+ "ls ./*.h7.*-1?-*.interp1.nc; " \
+)
+fnamesPS =  systemfunc( \
+ "ls ./*.h5.*-1?-*.interp1.nc; " \
+)
+if (any(ismissing(fnamesU))) then
    exit
 end if
 
-fuv_all   = addfiles(fnames,"r")       ; Open netCDF files.	
-print("files = "+fnames)
-fcnt = dimsizes(fnames)
+fall_PS   = addfiles(fnamesPS,"r")       ; Open netCDF files.
+fall_U   = addfiles(fnamesU,"r")       ; Open netCDF files.
+fall_V   = addfiles(fnamesV,"r")       ; Open netCDF files.	
+print("files = "+fnamesU)
+fcnt = dimsizes(fnamesU)
 print ("number of uv input files = " + fcnt)
 
 
@@ -115,7 +123,7 @@ lasttime_found=-1d0
 count = 0
 
 print("Computing spectra at P = "+pnew)
-if (isfilevar(fuv_all[0],"U"+pnew)) then
+if (isfilevar(fall_U[0],"U"+pnew)) then
   useVORDIV=False
   hasUplev = True
   usePSmean = True  ; actually PS is not used
@@ -124,7 +132,7 @@ if (isfilevar(fuv_all[0],"U"+pnew)) then
   print("found "+Uplev+" on input file. no vertical interpolation needed")
 else
    hasUplev = False
-   if (isfilevar(fuv_all[0],"VOR")) then
+   if (isfilevar(fall_U[0],"VOR")) then
       useVORDIV=True
       U3d="VOR"
       V3d="DIV"
@@ -136,8 +144,8 @@ else
    print("Computing spectra from: "+U3d+","+V3d)
    usePSmean = True
    print("Looking for PS:")
-   if (isfilevar(fuv_all[0],"PS")) then
-      sd=dimsizes(fuv_all[0]->PS)
+   if (isfilevar(fall_PS[0],"PS")) then
+      sd=dimsizes(fall_PS[0]->PS)
       if (dimsizes(sd).eq.3) then
          ; needs to be time, lat, lon
          usePSmean = False
@@ -145,8 +153,8 @@ else
       end if
       delete(sd)
    end if
-   if (isfilevar(fuv_all[0],"DYN_PS")) then
-      sd=dimsizes(fuv_all[0]->DYN_PS)
+   if (isfilevar(fall_PS[0],"DYN_PS")) then
+      sd=dimsizes(fall_PS[0]->DYN_PS)
       if (dimsizes(sd).eq.3) then
          ; needs to be time, lat, lon
          usePSmean = False
@@ -164,14 +172,9 @@ if (.not. hasUplev) then
    end if
 end if
 
-f1=fuv_all[0]
-gauss_grid=get_gridtype(f1->lat)
 
-
-
-
-fuv=fuv_all[0];    file with u, v
-
+fuv=fall_V[0];    file with u, v
+gauss_grid=get_gridtype(fuv->lat)
 ntimes = dimsizes(fuv->time)
 nlev = dimsizes(fuv->lev)
 nlat = dimsizes(fuv->lat)
@@ -242,14 +245,16 @@ do time=firsttime,lasttime,timeinc
   ;print("looking for t="+time)
   ; for each time, loop over files looking for the one with this time
   do fk=0,fcnt-1        
-    fuv=fuv_all[fk];
-    nuv = ind( (fuv->time).eq.time)
+    fu=fall_U[fk];
+    fv=fall_V[fk];
+    fps=fall_PS[fk];
+    nuv = ind( (fv->time).eq.time)
 
     if ( ismissing(nuv)) then
-      print("skipping = "+fnames(fk)+" record=(missing)" )
+      print("skipping = "+fnamesU(fk)+" record=(missing)" )
     else
       count=count+1
-      print(" file = "+fnames(fk))
+      print(" file = "+fnamesU(fk))
       print("time="+time+" record="+nuv+" count="+count )
 
       if (time .lt. firsttime_found) then
@@ -262,11 +267,11 @@ do time=firsttime,lasttime,timeinc
       ; lat/lon data
       deg = 360.0 / nlon
       NE = 1
-      if (isatt(fuv,"ne")) then
-        if (fuv@ne .gt. 0) then
-          NE=fuv@ne
-          if (isatt(fuv,"np")) then		
-             NPTS = fuv@np
+      if (isatt(fu,"ne")) then
+        if (fu@ne .gt. 0) then
+          NE=fu@ne
+          if (isatt(fu,"np")) then		
+             NPTS = fu@np
 	  else
              NPTS = 4
 	  end if
@@ -280,15 +285,15 @@ do time=firsttime,lasttime,timeinc
       
 
       if ( hasUplev ) then
-        var = fuv->$Uplev$(nuv,:,:)
-        var2 = fuv->$Vplev$(nuv,:,:)
+        var = fu->$Uplev$(nuv,:,:)
+        var2 = fv->$Vplev$(nuv,:,:)
       else
         if (usePSmean ) then
-	  ps = fuv->$U3d$(nuv,0,:,:)*0 + 100000
+	  ps = fu->$U3d$(nuv,0,:,:)*0 + 100000
 	  ps@units="Pa"
 	else
-          ps = fuv->$PSname$(nuv,:,:)
-          copyatt( ps, fuv->$PSname$(nuv,:,:))
+          ps = fps->$PSname$(nuv,:,:)
+          copyatt( ps, fps->$PSname$(nuv,:,:))
         end if	    
         if ( "mb" .eq. ps@units) then
           print("converting ps to Pascals. orig units ="+ps@units)
@@ -296,17 +301,17 @@ do time=firsttime,lasttime,timeinc
           ps@units="Pa"
         end if
         
-        hyam = fuv->hyam
-        hybm = fuv->hybm
+        hyam = fv->hyam
+        hybm = fv->hybm
         
         interp = 2     ; type of interpolation: 1 = linear, 2 = log, 3 = loglog
         extrap = True  ; is extrapolation desired if data is outside the range of PS
         P0mb = 1000    ; ps in Pa, but this argument must be in mb
 	
 	print ("Interpolating to pnew="+pnew+" ps min/max="+min(ps)+", "+max(ps))
-        temp=vinth2p(fuv->$U3d$(nuv,:,:,:),hyam,hybm,pnew,ps,interp,P0mb,1,extrap)
+        temp=vinth2p(fu->$U3d$(nuv,:,:,:),hyam,hybm,pnew,ps,interp,P0mb,1,extrap)
 	var=temp(0,:,:)
-        temp=vinth2p(fuv->$V3d$(nuv,:,:,:),hyam,hybm,pnew,ps,interp,P0mb,1,extrap)
+        temp=vinth2p(fv->$V3d$(nuv,:,:,:),hyam,hybm,pnew,ps,interp,P0mb,1,extrap)
 	var2=temp(0,:,:)
       end if
       print ("var1 min/max = "+min(var(:,:))+", "+max(var(:,:)) )
@@ -536,8 +541,8 @@ frame(wks)
    ncdf->deg = deg
    ncdf->count = count
 do fk=0,fcnt-1
-   c=sizeof(stringtochar(fnames(fk)));
-   fnames_list(fk,0:c-1)=stringtochar(fnames(fk));
+   c=sizeof(stringtochar(fnamesU(fk)));
+   fnames_list(fk,0:c-1)=stringtochar(fnamesU(fk));
 end do
    ncdf->fnames = fnames_list
 
