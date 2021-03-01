@@ -15,10 +15,11 @@
 #XXSBATCH --mem=128GB          
 
 date
-cd ~/scratch2/dyamond/dy2
+#cd ~/scratch2/dyamond/dy2
+#cd ~/chrys/F2010y1/run
 
-#ncl ~/codes/nclscript/spectra/ke.ncl   't1=22.000' 't2=24.000' 'tinc=0.125'  
-unbuffer ncl ~/codes/nclscript/spectra/ke.ncl  'plvl=500'  't1=22.000' 't2=24.000' 'tinc=0.125'  
+#unbuffer ncl ~/codes/nclscript/spectra/ke.ncl   't1=22.000' 't2=24.000' 'tinc=0.125'  
+ncl ~/codes/nclscript/spectra/ke.ncl  'plvl=500'  't1=1890.' 't2=1920.' 'tinc=0.5'  
 
 
 date

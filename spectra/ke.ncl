@@ -10,6 +10,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 ;  run this on one file, or multiple files from the same simulation
 ;  as it will average across files
 ;
+;  The spectra E(k) is normalized so that:
+;   sum(E(k)) =  integral ( u^2 + v^2 ) / Earth_surface_area
+;  So E(k) must be divided by 2 to match the KE = .5(u^2+v^2)
+;
 ;  ke2.ncl:  
 ;     plots the average spectra as computed by ke.ncl
 ;     publication quality
@@ -83,7 +87,16 @@ fnamesV =  systemfunc( \
 )
 fnamesPS =  systemfunc( \
  "ls ./*.h5.*-1?-*.interp1.nc; " \
-)
+ )
+
+ 
+fnamesU =  systemfunc( \
+ "ls ./*.h1.*.latlon.nc; ls held_suarez01.nc " \
+ )
+ fnamesV=fnamesU;
+ fnamesPS=fnamesU;
+
+ 
 if (any(ismissing(fnamesU))) then
    exit
 end if
@@ -140,6 +153,10 @@ else
       useVORDIV=False
       U3d="U"
       V3d="V"
+      if (isfilevar(fall_U[0],"u")) then
+        U3d="u"
+        V3d="v"
+      end if
    end if
    print("Computing spectra from: "+U3d+","+V3d)
    usePSmean = True
@@ -343,6 +360,9 @@ do time=firsttime,lasttime,timeinc
             end if
           end if
         end if
+        ; compute (U^2 + V^2) in grid space, to check normalization
+        KE1= ( fu->gw # ((var^2+var2^2)) )/sum(fu->gw)
+        KEgrid = sum(KE1)/nlon
       end if
       
       ; compute spectra from vor/div
@@ -395,6 +415,7 @@ do time=firsttime,lasttime,timeinc
       ; since we now compute vor & div, no reason to also compute
       ; vector harmonic transform.  
       spc = spc_vr + spc_dv 
+      print("sum(E(k)): "+sum(spc)+" <u^2+v^2>="+KEgrid)
 
 
       ; COMPUTE SPECTRA FROM U,V with vector spherical harmonics
