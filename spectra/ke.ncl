@@ -335,6 +335,7 @@ do time=firsttime,lasttime,timeinc
       print ("var2 min/max = "+min(var2(:,:))+", "+max(var2(:,:)) )
 
       vor_grid=gauss_grid
+      KEgrid=0
       if (  useVORDIV  ) then
          ; var = VOR.  var2= DIV
 	 vr=var
