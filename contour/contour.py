@@ -51,6 +51,8 @@ if clev==None:
         clev=[52000.,105000.,2000.]
     if var1=="PHIS":
         clev=[-500.,55000.,1000.]
+    if var1=="SWCF":
+        clev=[-110.,0.,2]
     if var1=="TMQ":
         clev=[0.,50.,.5]
     if var1=="Th":
