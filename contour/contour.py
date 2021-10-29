@@ -274,6 +274,7 @@ for t in range(t1,t2):
 
         if compute_dtheta_dp or compute_dt_dp:
             data2dm1=extract_level(dataf[t,...],klev-1,plev,ps[t,...],hyam,hybm)
+            # midpoint data
             dp =  (hyam[klev]*ps0 + hybm[klev]*ps[t,...]) -  \
                 (hyam[klev-1]*ps0 + hybm[klev-1]*ps[t,...]) 
             data2d = (data2d - data2dm1)/dp
@@ -291,9 +292,9 @@ for t in range(t1,t2):
             data2d=data2d - ps[t,...]
 
         if compute_mu:            
-            # data2d is pnh_i(k)
-            dp =  (hyam[klev]*ps0 + hybm[klev]*ps[t,...]) -  \
-                (hyam[klev-1]*ps0 + hybm[klev-1]*ps[t,...]) 
+            # interface data:
+            dp =  (hyai[klev+1]*ps0 + hybi[klev+1]*ps[t,...]) -  \
+                (hyai[klev]*ps0 + hybi[klev]*ps[t,...]) 
             data2dm1=extract_level(dataf[t,...],klev+1,plev,ps[t,...],hyam,hybm)
             data2d=(data2dm1-data2d)/dp
             
