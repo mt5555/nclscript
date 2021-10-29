@@ -3,7 +3,7 @@
 # python contour_latlon.py
 #
 #
-# contourngl -i inputfile  [options]  varname
+# contour.py -i inputfile  [options]  varname
 #
 from __future__ import print_function
 import os, numpy
@@ -12,7 +12,7 @@ from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlo
 from matplotlib import pyplot
 from vertprofile import ngl_vertprofile
 
-inname,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file \
+inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file \
     = myargs(os.sys.argv)
 
 var1 = varnames[0]
@@ -81,6 +81,27 @@ if var1=="PRECT" or var1=="PRECC" or var1=="PRECL":
 ################################################################
 # special processing
 ################################################################
+compute_psdiff=False
+if var1=="pnh-ps": 
+    print("Special processing:  pnhdiff=pnh-ps") 
+    compute_psdiff=True
+    var1_read="pnh_i"
+    longname="pnhs-ps"
+
+compute_mu=False
+if var1=="mu": 
+    print("Special processing:  mu = d(PNH)/dp3d") 
+    compute_mu=True
+    var1_read="DYN_PNH"
+    longname="mu"
+
+compute_dz=False
+if var1=="DZ3": 
+    print("Special processing:  dz = DYN_Z3(k)-DYN_Z3(k+1)") 
+    compute_dz=True
+    var1_read="DYN_Z3"
+    longname="DYN_DZ"
+
 compute_prect=False
 if var1=="PRECT" and ~("PRECT" in infile.variables.keys()):
     print("Special processing:  PRECT=PRECC+PRECL") 
@@ -127,6 +148,8 @@ if var1=="POTT":
 
     
 dataf  = infile.variables[var1_read]
+if var2_read != None:
+    dataf2 = infile.variables[var2_read]
 print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
 
 
@@ -141,7 +164,7 @@ if units=="" and hasattr(dataf,"units"):
 # time dimension and time values to plot
 ################################################################
 timedim =  "time" in dataf.dimensions
-levdim = "lev" in dataf.dimensions
+levdim = "lev" in dataf.dimensions or "ilev" in dataf.dimensions
 ntimes=1
 times=numpy.array([0])
 if timedim:
@@ -162,9 +185,15 @@ else:
 # level varaibles
 ################################################################
 nlev=0
-if "lev" in dataf.dimensions:
+nlev_data=0
+if levdim:
     nlev=infile.dimensions["lev"]
     lev=infile.variables["lev"][:]
+    if "lev" in dataf.dimensions:
+        nlev_data=nlev
+    if "ilev" in dataf.dimensions:
+        nlev_data=infile.dimensions["ilev"]
+
     if klev==None:
         klev=int(3*nlev/4)
     hyam=infile.variables['hyam']
@@ -240,7 +269,7 @@ for t in range(t1,t2):
     # 2D maps
     #
     if (timedim and levdim):
-        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev,"plev=",plev)
+        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev)
         data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm)
 
         if compute_dtheta_dp or compute_dt_dp:
@@ -249,10 +278,25 @@ for t in range(t1,t2):
                 (hyam[klev-1]*ps0 + hybm[klev-1]*ps[t,...]) 
             data2d = (data2d - data2dm1)/dp
 
+        if compute_dz:
+            data2dm1=extract_level(dataf[t,...],klev+1,plev,ps[t,...],hyam,hybm)
+            data2d = (data2d-data2dm1)
+
         if compute_pott:
             p =  hyam[klev]*ps0 + hybm[klev]*ps[t,...]
             exner=(p/ps0)**.2856  # kappa
             data2d=data2d/exner
+
+        if compute_psdiff:
+            data2d=data2d - ps[t,...]
+
+        if compute_mu:            
+            # data2d is pnh_i(k)
+            dp =  (hyam[klev]*ps0 + hybm[klev]*ps[t,...]) -  \
+                (hyam[klev-1]*ps0 + hybm[klev-1]*ps[t,...]) 
+            data2dm1=extract_level(dataf[t,...],klev+1,plev,ps[t,...],hyam,hybm)
+            data2d=(data2dm1-data2d)/dp
+            
 
 
     elif (timedim):
@@ -262,7 +306,7 @@ for t in range(t1,t2):
             longname="PRECT"
         print(t,"time=",times[t])
     elif (levdim):
-        print("k=",klev,"/",nlev,"plev=",plev)
+        print("k=",klev,"/",nlev_data,"plev=",plev)
         data2d=extract_level(dataf[...],klev,plev,ps[...],hyam,hybm)
     else:
         data2d=dataf[:]
@@ -325,12 +369,12 @@ for t in range(t1,t2):
     # 1D vertical profile at a specified point
     #
     # data2d[min_i1] will give value for either 1D or 2D data
-    if levdim and nlev>0:
+    if levdim and nlev_data>0:
         ncols=len((min_i1,max_i1))
         if var1=="Th" or var1=="POTT":
             ncols=ncols*3  # add ref profile
-        coldata_all=numpy.zeros([nlev,ncols])
-        p_all=numpy.zeros([nlev,ncols])
+        coldata_all=numpy.zeros([nlev_data,ncols])
+        p_all=numpy.zeros([nlev_data,ncols])
         icols=0
         for idx in (min_i1,max_i1):
             if (timedim):
@@ -368,7 +412,10 @@ for t in range(t1,t2):
                 
                 
             coldata_all[:,icols]=coldata
-            p_all[:,icols]=p
+            if (nlev_data==nlev):
+                p_all[:,icols]=p
+            else:
+                p_all[:,icols]=p_i
             icols=icols+1
             if var1=="Th" or var1=="POTT":
                 exner=(p/ps0)**.2856  # kappa

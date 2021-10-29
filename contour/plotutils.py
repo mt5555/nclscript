@@ -40,6 +40,7 @@ import Nio
 
 def myargs(argv):
     inputfile = ''
+    inputfile2 = ''
     scripfile = ''
     gllfile = ''
     varname = ''
@@ -52,9 +53,10 @@ def myargs(argv):
     name = argv[0]
     projection='latlon'
     try:
-        opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:m:r:")
+        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
+        print (name,' -j inputfile2')
         print (name,' -t timeindex starting at 1 [0=default-all times. -1=last time]')
         print (name,' -k levindex starting at 1  [default: 3*nlev/4]')
         print (name,' -p pressure(mb)  interpolate to pressure level')
@@ -71,6 +73,8 @@ def myargs(argv):
     for opt, arg in opts:
         if opt in ("-i"):
             inputfile = arg
+        elif opt in ("-j"):
+            inputfile2 = arg
         elif opt in ("-t"):
             timeindex=int(arg)
             timeindex=timeindex-1  # convert to zero-indexing
@@ -97,7 +101,7 @@ def myargs(argv):
         elif opt in ("-g"):
             gllfile = arg
                 
-    return inputfile,args,projection,timeindex,levindex,pressurelev,clev,\
+    return inputfile,inputfile2,args,projection,timeindex,levindex,pressurelev,clev,\
         nlatlon_interp,use_ngl,scripfile,gllfile
 
 
@@ -213,10 +217,10 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     elif projection == "andes2":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
-        res.mpMinLatF = -10.
-        res.mpMaxLatF = 15.
+        res.mpMinLatF = -17.
+        res.mpMaxLatF =  3.
         res.mpMinLonF = -85.
-        res.mpMaxLonF =  -60.
+        res.mpMaxLonF =  -65.
     elif projection == "himalaya":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
