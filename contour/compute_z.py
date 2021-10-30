@@ -154,21 +154,22 @@ else:
             #cmap='RdYlBu'     # good diverging colormap
     
 Rgas=287.04
+g=9.87
 for t in range(t1,t2):
 
     # sum over levels
-    for klev in range(nlev_data):
+    zh=0*ps[t,...]
+    for klev in reversed(range(nlev_data)):
         print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev)
-        data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm)
+        T2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm)
 
         p = hyam[klev]*ps0 + hybm[klev]*ps[t,...]
         dp =  (hyai[klev+1]*ps0 + hybi[klev+1]*ps[t,...]) -  \
             (hyai[klev]*ps0 + hybi[klev]*ps[t,...])
-        if (klev==0): 
-            zh = Rgas*dp*data2d/(p*g)
-        else:
-            zh = zh+ Rgas*dp*data2d/(p*g)
-            
+        zh = zh+ Rgas*dp*T2d/(p*g)
+        print("interface k=",klev+1,"pmin,pmax",numpy.amin(p)/100,numpy.amax(p)/100,"z min,max=",numpy.amin(zh),numpy.amax(zh))
+
+    data2d=zh
 
     data2dmin=numpy.amin(data2d)
     data2dmax=numpy.amax(data2d)
