@@ -150,7 +150,20 @@ Rgas=287.04
 g=9.87
 for t in range(t1,t2):
 
-    # sum over levels
+    zh=0
+    idx=(lat**2+(lon-180)**2).argmin()   # assume NCOL data.  
+    print("time=",times[t],"idx=",idx)
+    for klev in reversed(range(nlev_data)):
+        Tm=dataf[t,klev,idx] # assume NCOL data
+        p = hyam[klev]*ps0 + hybm[klev]*ps[t,idx]
+        dp =  (hyai[klev+1]*ps0 + hybi[klev+1]*ps[t,idx]) -  \
+            (hyai[klev]*ps0 + hybi[klev]*ps[t,idx])
+        zh = zh+ Rgas*dp*Tm/(p*g)
+        print("k_i=",klev,"At Pacfific Equator p=",p/100,"mb z=",zh,"m")
+
+
+for t in range(t1,t2):
+    # sum over levels, full field (very slow)
     zh=0*ps[t,...]
     for klev in reversed(range(nlev_data)):
         print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev)
@@ -162,9 +175,6 @@ for t in range(t1,t2):
         zh = zh+ Rgas*dp*T2d/(p*g)
         # need to add PHIS before this data makes sense, dont print for now:
         #print("k_i=",klev+1,"pmin,pmax",numpy.amin(p)/100,numpy.amax(p)/100,"z min,max=",numpy.amin(zh),numpy.amax(zh))
-        # on the equator, over the pacific. lat=0, lon=180
-        idx=(lat**2+(lon-180)**2).argmin()
-        print("k_i=",klev,"At Pacfific Equator p=",p[idx]/100,"mb z=",zh[idx],"m")
 
     data2d=zh
 
