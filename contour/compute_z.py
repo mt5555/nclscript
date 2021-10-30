@@ -45,9 +45,9 @@ if var2_read != None:
     dataf2 = infile.variables[var2_read]
 print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
 
-
-title="Z"
-longname="Z"
+# todo: read in PHIS, add to Z
+title="Z-ZS"
+longname="Z-ZS"
 units="m"
 
 ################################################################
@@ -164,7 +164,7 @@ for t in range(t1,t2):
         #print("k_i=",klev+1,"pmin,pmax",numpy.amin(p)/100,numpy.amax(p)/100,"z min,max=",numpy.amin(zh),numpy.amax(zh))
         # on the equator, over the pacific. lat=0, lon=180
         idx=(lat**2+(lon-180)**2).argmin()
-        print("k_i=",klev,"At Pacfific Equator  p,z: ",p[idx]/100,zh[idx])
+        print("k_i=",klev,"At Pacfific Equator p=",p[idx]/100,"mb z=",zh[idx],"m")
 
     data2d=zh
 
