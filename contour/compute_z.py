@@ -34,11 +34,7 @@ outname=inname.split(".nc")[0] + "."+var1
 vrange=[]
 
 if clev==None:
-    clev=[40]   # 40 levels, no range specified
-
-    if var1=="ZH":
-        clev=[-100.,50000.,1000]
-
+    clev=[30000.,60000.,1000]
 else:
     if len(clev)==2:
         clev.append((clev[1]-clev[0])/40)
@@ -50,12 +46,9 @@ if var2_read != None:
 print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
 
 
-title=var1
-if longname=="" and hasattr(dataf,"long_name"):
-    longname=dataf.long_name
-    title=""
-if units=="" and hasattr(dataf,"units"):
-    units=dataf.units
+title="Z"
+longname="Z"
+units="m"
 
 ################################################################
 # time dimension and time values to plot
@@ -167,7 +160,11 @@ for t in range(t1,t2):
         dp =  (hyai[klev+1]*ps0 + hybi[klev+1]*ps[t,...]) -  \
             (hyai[klev]*ps0 + hybi[klev]*ps[t,...])
         zh = zh+ Rgas*dp*T2d/(p*g)
-        print("interface k=",klev+1,"pmin,pmax",numpy.amin(p)/100,numpy.amax(p)/100,"z min,max=",numpy.amin(zh),numpy.amax(zh))
+        # need to add PHIS before this data makes sense, dont print for now:
+        #print("k_i=",klev+1,"pmin,pmax",numpy.amin(p)/100,numpy.amax(p)/100,"z min,max=",numpy.amin(zh),numpy.amax(zh))
+        # on the equator, over the pacific. lat=0, lon=180
+        idx=(lat**2+(lon-180)**2).argmin()
+        print("k_i=",klev,"At Pacfific Equator  p,z: ",p[idx]/100,zh[idx])
 
     data2d=zh
 
@@ -193,7 +190,6 @@ for t in range(t1,t2):
 
     print("scaled data2d min=",data2dmin,"at",min_i1,"lon=",lonmin,'lat=',latmin)
     print("scaled data2d max=",data2dmax,"at",max_i1,"lon=",lonmax,'lat=',latmax)
-
 
     # should we interpolate?
     if len(lon)*len(lat) != numpy.prod(data2d.shape) and nlatlon_interp:
