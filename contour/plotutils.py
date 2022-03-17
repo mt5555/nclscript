@@ -57,7 +57,7 @@ def myargs(argv):
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
         print (name,' -j inputfile2')
-        print (name,' -t timeindex starting at 1 [0=default-all times. -1=last time]')
+        print (name,' -t timeindex starting at 1 [0=default-last frame. -1=all times]')
         print (name,' -k levindex starting at 1  [default: 3*nlev/4]')
         print (name,' -p pressure(mb)  interpolate to pressure level')
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
@@ -193,6 +193,22 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.cnMaxLevelValF=clev[1]
         res.cnLevelSpacingF=clev[2]
 
+
+
+# defaults. some projection options might change:
+    res.cnFillOn              = True           # Turn on contour fill.
+    res.cnLinesOn             = False          # Turn off contour lines
+    res.cnLineLabelsOn        = False          # Turn off line labels.
+    res.cnInfoLabelOn         = False          # Turn off info label.
+
+    res.mpOutlineOn          = True
+    res.mpFillOn             = False
+    res.mpGridAndLimbOn      = False    # dont draw grid lines
+    #res.mpShapeMode          = "FreeAspect"
+    
+
+
+
     if projection == "latlon" :
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "MaximalArea"
@@ -254,6 +270,16 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75.
         res.mpMinLonF = 45.
         res.mpMaxLonF = 175.
+    elif projection == "baroclinic":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpCenterLonF         = 100.
+        res.mpMinLatF = 25.
+        res.mpMaxLatF = 75.
+        res.mpMinLonF = 25.
+        res.mpMaxLonF = 175.
+        res.cnLinesOn             = True          # Turn off contour lines
+        res.mpOutlineOn          = False
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -264,10 +290,6 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     #res.tiYAxisString = "~F25~latitude"
     res.nglPointTickmarksOutward = True
     
-    res.cnFillOn              = True           # Turn on contour fill.
-    res.cnLinesOn             = False          # Turn off contour lines
-    res.cnLineLabelsOn        = False          # Turn off line labels.
-    res.cnInfoLabelOn         = False          # Turn off info label.
 
     if cellbounds:
         res.cnFillMode = 'CellFill'
@@ -292,11 +314,6 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     #res.lbLabelStride       = 10
     res.lbBoxLinesOn        = False        # Turn of labelbar box lines.
     res.lbOrientation       = "horizontal"
-    
-    res.mpOutlineOn          = True
-    res.mpFillOn             = False
-    res.mpGridAndLimbOn      = False    # dont draw grid lines
-    #res.mpShapeMode          = "FreeAspect"
     
 
 
