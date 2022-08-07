@@ -181,8 +181,8 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     
     res = Ngl.Resources()
 
-    if cmap!=None:
-        res.cnFillPalette   = cmap
+    #if cmap!=None:
+    res.cnFillPalette   = cmap
         
     if len(clev)==1:
         res.cnLevelSelectionMode  = "AutomaticLevels"
@@ -216,6 +216,18 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         #    res.mpMaxLatF = 90.
         #    res.mpMinLonF = -180.
         #    res.mpMaxLonF = 180.
+    elif projection == "latlon-nc1":
+        # no continenents, turn on contour lines
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "MaximalArea"
+        res.mpOutlineOn          = False
+        res.cnLinesOn            = True
+    elif projection == "latlon-nc2":
+        # no continenents, turn off contour lines
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "MaximalArea"
+        res.mpOutlineOn          = False
+        res.cnLinesOn            = False
     elif projection == "US1":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -280,6 +292,16 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLonF = 175.
         res.cnLinesOn             = True          # Turn off contour lines
         res.mpOutlineOn          = False
+    elif projection == "barotopo":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        #res.mpCenterLonF         = -90.
+        res.mpMinLatF = 15. 
+        res.mpMaxLatF = 75. 
+        res.mpMinLonF = -150.
+        res.mpMaxLonF = 20.
+        res.cnLinesOn             = True          # Turn off contour lines
+        res.mpOutlineOn          = False
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -296,8 +318,8 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.sfXCellBounds = clon
         res.sfYCellBounds = clat
     else:
-        #res.cnFillMode            = "AreaFill"
-        res.cnFillMode            = "RasterFill"
+        res.cnFillMode            = "AreaFill"
+        #res.cnFillMode            = "RasterFill"
         res.cnRasterSmoothingOn = True
         res.sfXArray = lon[:]
         res.sfYArray = lat[:]
@@ -320,6 +342,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     
     res.tiMainString = title
     print("Title: ",res.tiMainString)
+    print("Longname: ",longname)
 
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
     if res.cnLevelSelectionMode == "ManualLevels":

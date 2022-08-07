@@ -76,6 +76,10 @@ if var1=="PRECT" or var1=="PRECC" or var1=="PRECL":
     scale=1000.0*(24*3600)  # convert to mm/day
     units="mm/day"
 
+if var1=="ps":
+    scale=1/100.0e0 
+    units="hPa"
+
 
 
 ################################################################
@@ -249,6 +253,22 @@ if use_ngl:
         if clev[1]==-clev[0]:
             cmap='MPL_RdYlBu'
             #cmap="BlueYellowRed"
+
+    if var1=="ps" and len(clev)>2:
+        # custom colormap with center at 1000mb
+        cmap = Ngl.read_colormap_file("MPL_RdYlBu")
+        n=cmap.shape
+        n=n[0]-1
+        nint=(clev[1]-clev[0])/clev[2]
+        print("cmap=",n,cmap.shape)
+        if (1000-clev[0]) > (clev[1]-1000):
+            x1=0
+            x2=int(n/nint +    ( (clev[1]-clev[0]) / (1000-clev[0]) )*n/2 )
+        else:
+            x1=int(n/nint +  n-  ( (clev[1]-clev[0]) / (clev[1]-1000) )*n/2 )
+            x2=n
+        print("using submit contour map centered at 1000mb:",cmap.shape,x1,x2)
+        cmap=cmap[x1:x2,:]
 
 
 else:
