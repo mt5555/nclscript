@@ -12,7 +12,7 @@ from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlo
 from matplotlib import pyplot
 from vertprofile import ngl_vertprofile
 
-inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file \
+inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file,se_file \
     = myargs(os.sys.argv)
 
 var1 = varnames[0]
@@ -150,8 +150,19 @@ if var1=="POTT":
         sys.exit(2)
 
 
+compute_avedx=False
+if var1=="ave_dx":
+    print("Special processing:  ave_dx=(min_dx+max_dx)/2") 
+    compute_avedx=True
+    var1_read="min_dx"
+    var2_read="max_dx"
+    longname="ave_dx"
+    units="km"
+
+
     
 dataf  = infile.variables[var1_read]
+data2d_plot2=numpy.array([])
 if var2_read != None:
     dataf2 = infile.variables[var2_read]
 print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
@@ -249,6 +260,11 @@ if use_ngl:
     #cmap="wgne15"
     #cmap="StepSeq25"
     #cmap="BlAqGrYeOrReVi200"
+    if compute_avedex:
+        cmap = Ngl.read_colormap_file(cmap)
+        cmap=numpy.flip(cmap,0)
+
+
     if len(clev)==3:
         if clev[1]==-clev[0]:
             cmap='MPL_RdYlBu'
@@ -331,6 +347,10 @@ for t in range(t1,t2):
         data2d=extract_level(dataf[...],klev,plev,ps[...],hyam,hybm)
     else:
         data2d=dataf[:]
+        if compute_avedx:
+            data2d_2=dataf2[:]
+            data2d=numpy.sqrt(data2d*data2d_2)
+            data2d_plot2=ps[t,...]
 
     if scale:
         data2d=data2d*scale
@@ -375,10 +395,10 @@ for t in range(t1,t2):
             
         data_i=interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
         ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
-                 proj,clev,cmap,scrip_file)
+                 proj,clev,cmap,scrip_file,se_file)
     elif use_ngl:
         ngl_plot(wks,data2d,lon,lat,title,longname,units,
-                 proj,clev,cmap,scrip_file)
+                 proj,clev,cmap,scrip_file,se_file,data2d_plot2)
     else:
         mpl_plot(data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,gll_file)
