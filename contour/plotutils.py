@@ -24,6 +24,7 @@ import Nio
 #
 #   scrip_file      option for NGL plots, user specified dual grid
 #   gll_file        option for matplotlib, user specified subcells for triangulation
+#   se_file         option to NGL plots, to draw spectral element mesh
 # 
 #
 # can handle many types of plots:
@@ -43,6 +44,7 @@ def myargs(argv):
     inputfile2 = ''
     scripfile = ''
     gllfile = ''
+    se_file = ''
     varname = ''
     use_ngl = True
     timeindex = None
@@ -53,7 +55,7 @@ def myargs(argv):
     name = argv[0]
     projection='latlon'
     try:
-        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:")
+        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:e:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
         print (name,' -j inputfile2')
@@ -69,6 +71,7 @@ def myargs(argv):
         print (name,' -y ngl,mpl')
         print (name,' -s scriptfile')
         print (name,' -g gll_subcell_file')
+        print (name,' -e Exodus.g file for plotting spectral elements')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-i"):
@@ -100,9 +103,11 @@ def myargs(argv):
             scripfile = arg
         elif opt in ("-g"):
             gllfile = arg
+        elif opt in ("-e"):
+            se_file = arg
                 
     return inputfile,inputfile2,args,projection,timeindex,levindex,pressurelev,clev,\
-        nlatlon_interp,use_ngl,scripfile,gllfile
+        nlatlon_interp,use_ngl,scripfile,gllfile,se_file
 
 
 def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
@@ -169,8 +174,24 @@ def extract_level(dataf,klev,plev,PS,hyam,hybm):
 
 
 def ngl_plot(wks,data2d,lon,lat,title,longname,units,
-             projection,clev,cmap,scrip_file):
-    
+             projection,clev,cmap,scrip_file,se_file,data2d_2=[]):
+
+    se_num=0
+    if os.path.isfile(se_file):
+        print("adding to plot:  SE grid from:",se_file)
+        infile = Nio.open_file(se_file,"r")
+        se_coord  = infile.variables["coord"][:,:]
+        se_connect  = infile.variables["connect1"][:,:]
+        se_num=se_connect.shape[0]
+        print("number of elements =",se_num)
+        #print("se_coord shape: ", se_coord.shape)
+        #print("se_connectshape: ", se_connect.shape)
+        # j=se_connect(i,0:3) is the index of the 4 corners of cell i
+        # se_coord(0:2,j) are the x,y,z coords of vertex j
+        se_lat = numpy.arcsin(se_coord[2,:])*180/numpy.pi
+        se_lon = numpy.arctan2(se_coord[1,:],se_coord[0,:])*180/numpy.pi
+        
+
     cellbounds=False
     if os.path.isfile(scrip_file):
         infile = Nio.open_file(scrip_file,"r")
@@ -183,16 +204,18 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 
     #if cmap!=None:
     res.cnFillPalette   = cmap
-        
+
+    nlevels=-1  # not specified
     if len(clev)==1:
         res.cnLevelSelectionMode  = "AutomaticLevels"
         res.cnMaxLevelCount = clev[0]
+        nlevels=clev[0]
     else:
         res.cnLevelSelectionMode  = "ManualLevels"
         res.cnMinLevelValF=clev[0]
         res.cnMaxLevelValF=clev[1]
         res.cnLevelSpacingF=clev[2]
-
+        nlevels=(clev[1]-clev[0])/clev[2]
 
 
 # defaults. some projection options might change:
@@ -319,10 +342,14 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.sfYCellBounds = clat
     else:
         res.cnFillMode            = "AreaFill"
-        #res.cnFillMode            = "RasterFill"
+        if (nlevels>25):
+            print("more than 25 contours, switching to raserfill")
+            res.cnFillMode            = "RasterFill"
         res.cnRasterSmoothingOn = True
         res.sfXArray = lon[:]
         res.sfYArray = lat[:]
+
+
 
     #res.sfCopyData = False
  
@@ -346,13 +373,12 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
     if res.cnLevelSelectionMode == "ManualLevels":
-        nlevels=(res.cnMaxLevelValF-res.cnMinLevelValF)/res.cnLevelSpacingF
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
         print("number of contour levels:",nlevels)
     else:
         print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
-        nlevels=res.cnMaxLevelCount
+
 
     if nlevels>20:
         res.lbLabelStride       = nlevels/8
@@ -371,11 +397,33 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         print("NGL unstructered plot with cell bounds")
     else:
         print("Error with resource coordinate data")
-            
-    # plot:
-    map = Ngl.contour_map(wks,data2d,res2)
-    print("Contour done.")
+
+    if data2d_2.size == 0:
+        # contour data2d
+        map1 = Ngl.contour_map(wks,data2d,res2)
+    else:
+        # plot variable, then add contour lines from data2d_2:
+        res2.nglDraw  = False
+        map1 = Ngl.map(wks,res2)
+        map2 = Ngl.contour(wks,data2d,res2)
+        print("Adding contour line plot...")
+        res3=res
+        res3.mpOutlineOn          = False
+        res3.cnFillOn             = False         # Turn on contour fill.
+        res3.cnLinesOn            = True          # Turn off contour lines
+        #res3.cnLineColor          = "White"
+        res3.cnLevelSelectionMode  = "AutomaticLevels"
+        res3.cnMaxLevelCount = 5
+        res3.cnLevelSpacingF=1e5   # ignored, but set to prevent warnings
+        map3 = Ngl.contour(wks,data2d_2,res3)
+        Ngl.overlay(map1,map2)
+        Ngl.overlay(map1,map3)
+        Ngl.maximize_plot(wks,map1)    # Maximize size of plot in frame.
+        Ngl.draw(map1)
+        del res3
+
     del res2
+    print("Contour done.")
         
     #-- write variable long_name and units to the plot
     txres = Ngl.Resources()
@@ -383,9 +431,24 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     Ngl.text_ndc(wks,longname,0.14,0.82,txres)
     Ngl.text_ndc(wks,units, 0.95,0.82,txres)
     del txres
+
+    if se_num>0:
+        gsres = Ngl.Resources()
+        gsres.gsLineColor            = "black"
+        gsres.gsLineThicknessF       = 0.05
+        for x in se_connect:
+            x1=se_lon[x-1]
+            x2=x1[0:1]
+            plon=numpy.concatenate( [x1,x2])
+            x1=se_lat[x-1]
+            x2=x1[0:1]
+            plat=numpy.concatenate( [x1,x2])
+            Ngl.polyline(wks,map1,plon,plat,gsres)
+        del gsres
+            
     
     Ngl.frame(wks)       # advance frame
-    return map
+    return map1
 
 
     
