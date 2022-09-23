@@ -260,7 +260,7 @@ if use_ngl:
     #cmap="wgne15"
     #cmap="StepSeq25"
     #cmap="BlAqGrYeOrReVi200"
-    if compute_avedex:
+    if compute_avedx:
         cmap = Ngl.read_colormap_file(cmap)
         cmap=numpy.flip(cmap,0)
 

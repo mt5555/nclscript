@@ -174,7 +174,7 @@ def extract_level(dataf,klev,plev,PS,hyam,hybm):
 
 
 def ngl_plot(wks,data2d,lon,lat,title,longname,units,
-             projection,clev,cmap,scrip_file,se_file,data2d_2=[]):
+             projection,clev,cmap,scrip_file,se_file,data2d_2=numpy.array([])):
 
     se_num=0
     if os.path.isfile(se_file):
