@@ -210,7 +210,7 @@ if use_ngl:
     wks = Ngl.open_wks(wks_type,outname)
     if levdim and nlev>0:
         wks_v = Ngl.open_wks(wks_type,outname+"_v")
-    print("output file: ",outname+"."+wks_type)
+    print("NGL output file: ",outname+"."+wks_type)
     cmap='MPL_viridis'
     #cmap="WhiteBlueGreenYellowRed"
     #cmap="wgne15"
@@ -224,7 +224,7 @@ if use_ngl:
 
 else:
     outname=outname+"."+wks_type
-    print("output file: ",outname)
+    print("MPL output file: ",outname)
     #cmap='nipy_spectral'
     #cmap='viridis'
     cmap='plasma'
@@ -299,6 +299,7 @@ for t in range(t1,t2):
     if len(lon)*len(lat) != numpy.prod(data2d.shape) and nlatlon_interp:
         nlat=nlatlon_interp[0]
         nlon=nlatlon_interp[1]
+        # dont add endpoint, to be consistent with lat x lon history files
         lon_i = numpy.linspace(0, 360, nlon,endpoint=False)  
         if nlat % 2 == 0:
             dlat2=90./nlat
@@ -309,8 +310,16 @@ for t in range(t1,t2):
             print("Interpolating unstructured to:",nlat,"x",nlon,"nlat x nlon cap grid")
             
         data_i=interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
-        ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
-                 proj,clev,cmap,scrip_file)
+        if use_ngl:
+            print("calling ngl")
+            ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
+                     proj,clev,cmap,scrip_file)
+        else:
+            print("calling mpl_plot")
+            mpl_plot(data_i,lon_i,lat_i,title,longname,units,
+                     proj,clev,cmap,gll_file)
+            pyplot.savefig(outname,dpi=300,orientation="portrait")
+            
     elif use_ngl:
         ngl_plot(wks,data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file)

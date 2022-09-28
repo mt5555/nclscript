@@ -349,7 +349,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
     
     # Setup the plot
-    figure = pyplot.figure(figsize=(15, 10))
+    figure = pyplot.figure() #(figsize=(15, 10))
     dataproj=crs.PlateCarree()
 
     # pcolor/tripcolor doesn't use nelvels or contour intervals
@@ -367,15 +367,15 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
         ax = pyplot.axes(projection=plotproj)
         ax.set_global()
     elif proj=="US1":
-        plotproj=plotproj=crs.PlateCarree(central_longitude=0.0)
+        plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-180, 0, -30, 75],crs=dataproj)
     elif proj=="andes":
-        plotproj=plotproj=crs.PlateCarree(central_longitude=0.0)
+        plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-100, -40, -40, 15],crs=dataproj)
     elif proj=="himalaya":
-        plotproj=plotproj=crs.PlateCarree(central_longitude=90.0)
+        plotproj=crs.PlateCarree(central_longitude=90.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([50, 110, 0, 60],crs=dataproj)
     elif proj=="oro":
@@ -388,7 +388,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
 
     ax.coastlines(linewidth=0.2)
     
-    # strucgtured lat/lon or unstructured data?
+    # structured lat/lon or unstructured data?
     struct=False
     if len(lon)*len(lat) == numpy.prod(data2d.shape): struct=True
     
@@ -413,8 +413,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
             compute_tri=False
 
 
-    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
     print("colormap min/max=",vmin,vmax)
+    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
     if struct:
         data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
         print("MPL plotting structured data (with added cyclic point)")
