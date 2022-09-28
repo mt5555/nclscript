@@ -24,6 +24,7 @@ import Nio
 #
 #   scrip_file      option for NGL plots, user specified dual grid
 #   gll_file        option for matplotlib, user specified subcells for triangulation
+#   se_file         option to NGL plots, to draw spectral element mesh
 # 
 #
 # can handle many types of plots:
@@ -40,8 +41,10 @@ import Nio
 
 def myargs(argv):
     inputfile = ''
+    inputfile2 = ''
     scripfile = ''
     gllfile = ''
+    se_file = ''
     varname = ''
     use_ngl = True
     timeindex = None
@@ -52,10 +55,11 @@ def myargs(argv):
     name = argv[0]
     projection='latlon'
     try:
-        opts, args = getopt.getopt(argv[1:],"i:s:g:t:k:p:y:c:m:r:")
+        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:e:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
-        print (name,' -t timeindex starting at 1 [0=default-all times. -1=last time]')
+        print (name,' -j inputfile2')
+        print (name,' -t timeindex starting at 1 [0=default-last frame. -1=all times]')
         print (name,' -k levindex starting at 1  [default: 3*nlev/4]')
         print (name,' -p pressure(mb)  interpolate to pressure level')
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
@@ -67,10 +71,13 @@ def myargs(argv):
         print (name,' -y ngl,mpl')
         print (name,' -s scriptfile')
         print (name,' -g gll_subcell_file')
+        print (name,' -e Exodus.g file for plotting spectral elements')
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-i"):
             inputfile = arg
+        elif opt in ("-j"):
+            inputfile2 = arg
         elif opt in ("-t"):
             timeindex=int(arg)
             timeindex=timeindex-1  # convert to zero-indexing
@@ -96,9 +103,11 @@ def myargs(argv):
             scripfile = arg
         elif opt in ("-g"):
             gllfile = arg
+        elif opt in ("-e"):
+            se_file = arg
                 
-    return inputfile,args,projection,timeindex,levindex,pressurelev,clev,\
-        nlatlon_interp,use_ngl,scripfile,gllfile
+    return inputfile,inputfile2,args,projection,timeindex,levindex,pressurelev,clev,\
+        nlatlon_interp,use_ngl,scripfile,gllfile,se_file
 
 
 def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
@@ -165,8 +174,24 @@ def extract_level(dataf,klev,plev,PS,hyam,hybm):
 
 
 def ngl_plot(wks,data2d,lon,lat,title,longname,units,
-             projection,clev,cmap,scrip_file):
-    
+             projection,clev,cmap,scrip_file,se_file,data2d_2=numpy.array([])):
+
+    se_num=0
+    if os.path.isfile(se_file):
+        print("adding to plot:  SE grid from:",se_file)
+        infile = Nio.open_file(se_file,"r")
+        se_coord  = infile.variables["coord"][:,:]
+        se_connect  = infile.variables["connect1"][:,:]
+        se_num=se_connect.shape[0]
+        print("number of elements =",se_num)
+        #print("se_coord shape: ", se_coord.shape)
+        #print("se_connectshape: ", se_connect.shape)
+        # j=se_connect(i,0:3) is the index of the 4 corners of cell i
+        # se_coord(0:2,j) are the x,y,z coords of vertex j
+        se_lat = numpy.arcsin(se_coord[2,:])*180/numpy.pi
+        se_lon = numpy.arctan2(se_coord[1,:],se_coord[0,:])*180/numpy.pi
+        
+
     cellbounds=False
     if os.path.isfile(scrip_file):
         infile = Nio.open_file(scrip_file,"r")
@@ -177,17 +202,35 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     
     res = Ngl.Resources()
 
-    if cmap!=None:
-        res.cnFillPalette   = cmap
-        
+    #if cmap!=None:
+    res.cnFillPalette   = cmap
+
+    nlevels=-1  # not specified
     if len(clev)==1:
         res.cnLevelSelectionMode  = "AutomaticLevels"
         res.cnMaxLevelCount = clev[0]
+        nlevels=clev[0]
     else:
         res.cnLevelSelectionMode  = "ManualLevels"
         res.cnMinLevelValF=clev[0]
         res.cnMaxLevelValF=clev[1]
         res.cnLevelSpacingF=clev[2]
+        nlevels=(clev[1]-clev[0])/clev[2]
+
+
+# defaults. some projection options might change:
+    res.cnFillOn              = True           # Turn on contour fill.
+    res.cnLinesOn             = False          # Turn off contour lines
+    res.cnLineLabelsOn        = False          # Turn off line labels.
+    res.cnInfoLabelOn         = False          # Turn off info label.
+
+    res.mpOutlineOn          = True
+    res.mpFillOn             = False
+    res.mpGridAndLimbOn      = False    # dont draw grid lines
+    #res.mpShapeMode          = "FreeAspect"
+    
+
+
 
     if projection == "latlon" :
         res.mpProjection = "CylindricalEquidistant"
@@ -196,6 +239,18 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         #    res.mpMaxLatF = 90.
         #    res.mpMinLonF = -180.
         #    res.mpMaxLonF = 180.
+    elif projection == "latlon-nc1":
+        # no continenents, turn on contour lines
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "MaximalArea"
+        res.mpOutlineOn          = False
+        res.cnLinesOn            = True
+    elif projection == "latlon-nc2":
+        # no continenents, turn off contour lines
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "MaximalArea"
+        res.mpOutlineOn          = False
+        res.cnLinesOn            = False
     elif projection == "US1":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -213,10 +268,10 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     elif projection == "andes2":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
-        res.mpMinLatF = -10.
-        res.mpMaxLatF = 15.
+        res.mpMinLatF = -17.
+        res.mpMaxLatF =  3.
         res.mpMinLonF = -85.
-        res.mpMaxLonF =  -60.
+        res.mpMaxLonF =  -65.
     elif projection == "himalaya":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -250,6 +305,26 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75.
         res.mpMinLonF = 45.
         res.mpMaxLonF = 175.
+    elif projection == "baroclinic":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpCenterLonF         = 100.
+        res.mpMinLatF = 25.
+        res.mpMaxLatF = 75.
+        res.mpMinLonF = 25.
+        res.mpMaxLonF = 175.
+        res.cnLinesOn             = True          # Turn off contour lines
+        res.mpOutlineOn          = False
+    elif projection == "barotopo":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        #res.mpCenterLonF         = -90.
+        res.mpMinLatF = 15. 
+        res.mpMaxLatF = 75. 
+        res.mpMinLonF = -150.
+        res.mpMaxLonF = 20.
+        res.cnLinesOn             = True          # Turn off contour lines
+        res.mpOutlineOn          = False
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -260,21 +335,21 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     #res.tiYAxisString = "~F25~latitude"
     res.nglPointTickmarksOutward = True
     
-    res.cnFillOn              = True           # Turn on contour fill.
-    res.cnLinesOn             = False          # Turn off contour lines
-    res.cnLineLabelsOn        = False          # Turn off line labels.
-    res.cnInfoLabelOn         = False          # Turn off info label.
 
     if cellbounds:
         res.cnFillMode = 'CellFill'
         res.sfXCellBounds = clon
         res.sfYCellBounds = clat
     else:
-        #res.cnFillMode            = "AreaFill"
-        res.cnFillMode            = "RasterFill"
+        res.cnFillMode            = "AreaFill"
+        if (nlevels>25):
+            print("more than 25 contours, switching to raserfill")
+            res.cnFillMode            = "RasterFill"
         res.cnRasterSmoothingOn = True
         res.sfXArray = lon[:]
         res.sfYArray = lat[:]
+
+
 
     #res.sfCopyData = False
  
@@ -289,26 +364,21 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     res.lbBoxLinesOn        = False        # Turn of labelbar box lines.
     res.lbOrientation       = "horizontal"
     
-    res.mpOutlineOn          = True
-    res.mpFillOn             = False
-    res.mpGridAndLimbOn      = False    # dont draw grid lines
-    #res.mpShapeMode          = "FreeAspect"
-    
 
 
     
     res.tiMainString = title
     print("Title: ",res.tiMainString)
+    print("Longname: ",longname)
 
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
     if res.cnLevelSelectionMode == "ManualLevels":
-        nlevels=(res.cnMaxLevelValF-res.cnMinLevelValF)/res.cnLevelSpacingF
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
         print("number of contour levels:",nlevels)
     else:
         print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
-        nlevels=res.cnMaxLevelCount
+
 
     if nlevels>20:
         res.lbLabelStride       = nlevels/8
@@ -327,11 +397,33 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         print("NGL unstructered plot with cell bounds")
     else:
         print("Error with resource coordinate data")
-            
-    # plot:
-    map = Ngl.contour_map(wks,data2d,res2)
-    print("Contour done.")
+
+    if data2d_2.size == 0:
+        # contour data2d
+        map1 = Ngl.contour_map(wks,data2d,res2)
+    else:
+        # plot variable, then add contour lines from data2d_2:
+        res2.nglDraw  = False
+        map1 = Ngl.map(wks,res2)
+        map2 = Ngl.contour(wks,data2d,res2)
+        print("Adding contour line plot...")
+        res3=res
+        res3.mpOutlineOn          = False
+        res3.cnFillOn             = False         # Turn on contour fill.
+        res3.cnLinesOn            = True          # Turn off contour lines
+        #res3.cnLineColor          = "White"
+        res3.cnLevelSelectionMode  = "AutomaticLevels"
+        res3.cnMaxLevelCount = 5
+        res3.cnLevelSpacingF=1e5   # ignored, but set to prevent warnings
+        map3 = Ngl.contour(wks,data2d_2,res3)
+        Ngl.overlay(map1,map2)
+        Ngl.overlay(map1,map3)
+        Ngl.maximize_plot(wks,map1)    # Maximize size of plot in frame.
+        Ngl.draw(map1)
+        del res3
+
     del res2
+    print("Contour done.")
         
     #-- write variable long_name and units to the plot
     txres = Ngl.Resources()
@@ -339,9 +431,24 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     Ngl.text_ndc(wks,longname,0.14,0.82,txres)
     Ngl.text_ndc(wks,units, 0.95,0.82,txres)
     del txres
+
+    if se_num>0:
+        gsres = Ngl.Resources()
+        gsres.gsLineColor            = "black"
+        gsres.gsLineThicknessF       = 0.05
+        for x in se_connect:
+            x1=se_lon[x-1]
+            x2=x1[0:1]
+            plon=numpy.concatenate( [x1,x2])
+            x1=se_lat[x-1]
+            x2=x1[0:1]
+            plat=numpy.concatenate( [x1,x2])
+            Ngl.polyline(wks,map1,plon,plat,gsres)
+        del gsres
+            
     
     Ngl.frame(wks)       # advance frame
-    return map
+    return map1
 
 
     
