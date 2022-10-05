@@ -9,9 +9,8 @@ from __future__ import print_function
 import os, numpy
 import Nio
 from plotutils import myargs, extract_level, interp_to_latlon
-from matplotlib import pyplot
-
-
+#from matplotlib import pyplot
+import matplotlib.pyplot as plt
 
 inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file,se_file \
     = myargs(os.sys.argv)
@@ -32,16 +31,6 @@ lon_i = numpy.linspace(0, 360, nlon,endpoint=False)
 #nlon=1
 #lon_i = numpy.array([-20.0])
 #lat_i = numpy.linspace(-90, 90, nlat)  # to regrid to 1/2 degree
-
-
-# compute cross section interpolation grid
-# grid: lat_i, lon_i
-# dimensions:  nlat, nlon
-if len(lon)*len(lat) == numpy.prod(data2d.shape):
-    # lat/lon data.  Find line of data closest to target location
-    print("Error: cross section plot not yet supported for structured data")
-
-
 
 
 if var2_read != None:
@@ -99,6 +88,14 @@ hybi=infile.variables['hybi']
 print("nlev=",nlev)
 
 
+# constants
+Rgas=287.04
+g=9.87
+Cp=1005.
+TREF=288.
+T1=6.5e-3*TREF*Cp/g
+T0=TREF-T1
+ps0=1000*100
 
 
 
@@ -113,8 +110,11 @@ if (timedim):
 else:
     data2d=dataf[:]
 print("Interpolating unstructured to:",nlat,"x",nlon,"nlat x nlon grid")
+data2d=data2d/g
+print("ZS min,max: ",numpy.amin(data2d),numpy.amax(data2d))
 zh=numpy.empty([nlev+1,nlat,nlon])   # on interfaces
 zh[nlev,:,:] = interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
+print("ZS interpoalted min,max: ",numpy.amin(zh[nlev,:,:]),numpy.amax(zh[nlev,:,:]))
 
 ################################################################
 # get correct PS variable, interpolate
@@ -126,14 +126,7 @@ zh[nlev,:,:] = interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
 ps_i = ps0 * numpy.exp( -zh[nlev,:,:]/(Rgas*TREF))
 
 
-# compute level height
-Rgas=287.04
-g=9.87
-Cp=1005.
-TREF=288.
-T1=6.5e-3*TREF*Cp/g
-T0=TREF-T1
-ps0=1000*100
+
 for k in range(nlev-1,-1,-1):
     p = hyam[k]*ps0 + hybm[k]*ps_i
     exner = (p/ps0)**(Rgas/Cp)
@@ -142,17 +135,30 @@ for k in range(nlev-1,-1,-1):
     inc = Rgas*dp*(T0 + T1*exner)/(p*g)
 
 
-for k in range(nlev+1):
-    print(k,numpy.amin(zh[k,:,:]),numpy.amax(zh[k,:,:]))
+#for k in range(nlev+1):
+#    print(k,numpy.amin(zh[k,:,:]),numpy.amax(zh[k,:,:]))
         
 
 wks_type = "pdf"
 outname=outname+"."+wks_type
 print("MPL output file: ",outname)
 
+
 # mpl line plot of topography:        
+fig, axs = plt.subplots()
 
-
+if len(lat_i)==1:
+    axs.plot(lon_i,zh[nlev,0,:],label='k',color='b')
+    axs.plot(lon_i,zh[nlev-5,0,:],label='k',color='b')    
+    axs.set(xlabel='longitude', ylabel='height (m)',title='levels')
+if len(lon_i)==1:
+    axs.plot(lon_i,zh[nlev,:,0],label='k',color='b')
+    axs.set(xlabel='latitude', ylabel='height (m)',title='levels')
     
+axs.grid(True)
+plt.show()                                                                                               
+print("writing plot...")
+plt.savefig("temp.png")
+
 
 
