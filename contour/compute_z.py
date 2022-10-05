@@ -1,9 +1,11 @@
 #!/usr/bin/env python
-# Contour over maps of lat/lon data
-# python contour_latlon.py
-#
 #
 # contour.py -i inputfile  [options]  varname
+#
+# read in T (varname ignored), compute p from hybrid coords, compute zh
+# print p and z at model top over pacific
+# contour zh at model top
+# print vertical profile of T as a function of p
 #
 from __future__ import print_function
 import os, numpy
@@ -151,7 +153,7 @@ g=9.87
 for t in range(t1,t2):
 
     zh=0
-    idx=(lat**2+(lon-180)**2).argmin()   # assume NCOL data.  
+    idx=(lat**2+(lon-180)**2).argmin()   # assume NCOL data. closest point to (0,180)
     print("time=",times[t],"idx=",idx)
     for klev in reversed(range(nlev_data)):
         Tm=dataf[t,klev,idx] # assume NCOL data
@@ -159,7 +161,7 @@ for t in range(t1,t2):
         dp =  (hyai[klev+1]*ps0 + hybi[klev+1]*ps[t,idx]) -  \
             (hyai[klev]*ps0 + hybi[klev]*ps[t,idx])
         zh = zh+ Rgas*dp*Tm/(p*g)
-        print("k_i=",klev,"At Pacfific Equator p=",p/100,"mb z=",zh,"m")
+        print("k_i=",klev,"At Pacific Equator p=",p/100,"mb z=",zh,"m")
 
 
 for t in range(t1,t2):
