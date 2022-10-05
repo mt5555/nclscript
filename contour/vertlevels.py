@@ -24,26 +24,45 @@ print('PHIS file=',inname2)
 infile = Nio.open_file(inname,"r")
 outname=inname2.split(".nc")[0] + ".topo"
 
-lat_i_target=-20.0
-lon_i_target=None
+nlat=1
+nlon=1024
+lat_i = numpy.array([-20.0])
+lon_i = numpy.linspace(0, 360, nlon,endpoint=False)
+#nlat=1024
+#nlon=1
+#lon_i = numpy.array([-20.0])
+#lat_i = numpy.linspace(-90, 90, nlat)  # to regrid to 1/2 degree
 
-################################################################
-# custom contour levels for certain varaiables
-################################################################
-vrange=[]
 
-if clev==None:
-    clev=[40]   # 40 levels, no range specified
-else:
-    if len(clev)==2:
-        clev.append((clev[1]-clev[0])/40)
+# compute cross section interpolation grid
+# grid: lat_i, lon_i
+# dimensions:  nlat, nlon
+if len(lon)*len(lat) == numpy.prod(data2d.shape):
+    # lat/lon data.  Find line of data closest to target location
+    print("Error: cross section plot not yet supported for structured data")
+
+
+
 
 if var2_read != None:
     dataf = infile.variables[var2_read]
-print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
 
+if "ncol_d" in dataf.dimensions or "ncol" in dataf.dimensions:
+    print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
+else:
+    print("Error: vertlevels.py only coded for ncol data")
 
+################################################################
+# coordinates
+################################################################
+if "ncol_d" in dataf.dimensions:
+    lat  = infile.variables["lat_d"][:]
+    lon  = infile.variables["lon_d"][:]
+else:
+    lat  = infile.variables["lat"][:]
+    lon  = infile.variables["lon"][:]
 
+    
 ################################################################
 # time dimension and time values to plot
 ################################################################
@@ -80,38 +99,11 @@ hybi=infile.variables['hybi']
 print("nlev=",nlev)
 
 
-################################################################
-# get correct PS variable
-################################################################
-ps=numpy.empty([ntimes,1])  # dummy array, wont be used, but needs to be indexed    
-if "ps" in infile.variables.keys():
-    ps0=1000*100
-    ps=infile.variables["ps"]
 
-if "P0" in infile.variables.keys():
-    ps0=infile.variables["P0"].get_value()
 
-if "ncol_d" in dataf.dimensions:
-    lat  = infile.variables["lat_d"][:]
-    lon  = infile.variables["lon_d"][:]
-    PSname="DYN_PS"
-    ps=infile.variables["DYN_PS"]
-else:
-    lat  = infile.variables["lat"][:]
-    lon  = infile.variables["lon"][:]
-    PSname="PS"
-    if "PS" in infile.variables.keys():
-        ps=infile.variables["PS"]
-print("P0 = ",ps0)
-print("ps min/max = ",numpy.amin(ps),numpy.amax(ps))
-
-wks_type = "pdf"
-    
-outname=outname+"."+wks_type
-print("MPL output file: ",outname)
 
 #
-# read PHIS
+# read PHIS and interpolate
 #
 t=t1
 # read PHIS, interpolate
@@ -120,34 +112,18 @@ if (timedim):
     print(t,"time=",times[t])
 else:
     data2d=dataf[:]
-
-
-# compute cross section interpolation grid
-# grid: lat_i, lon_i
-# dimensions:  nlat, nlon
-if len(lon)*len(lat) == numpy.prod(data2d.shape):
-    # lat/lon data.  Find line of data closest to target location
-    print("Error: cross section plot not yet supported for structured data")
-else:
-    # unstructured data, interpolate to cross section
-    if lat_i_target != None:
-        nlon=10
-        nlat=1
-        nx=nlon  # cross section dimension
-        lat_i=[lat_i_target]
-        lon_i = numpy.linspace(0, 360, nlon,endpoint=False)
-    if lon_i_target != None:
-        nlat=10
-        nlon=1
-        nx=nlat  # cross section dimension
-        lon_i=lon_i_target
-        lat_i = numpy.linspace(-90, 90, nlat)  # to regrid to 1/2 degree
-
-
-    
 print("Interpolating unstructured to:",nlat,"x",nlon,"nlat x nlon grid")
 zh=numpy.empty([nlev+1,nlat,nlon])   # on interfaces
 zh[nlev,:,:] = interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
+
+################################################################
+# get correct PS variable, interpolate
+################################################################
+#ps=infile.variables["ps"]
+#ps=infile.variables["DYN_PS"]
+#ps=infile.variables["PS"]
+#ps_i = interp_to_latlon(ps,lat,lon,lat_i,lon_i)
+ps_i = ps0 * numpy.exp( -zh[nlev,:,:]/(Rgas*TREF))
 
 
 # compute level height
@@ -157,25 +133,24 @@ Cp=1005.
 TREF=288.
 T1=6.5e-3*TREF*Cp/g
 T0=TREF-T1
-
-#interpolate ps:
-#pstmp=ps[t,...]
-#ps_i = interp_to_latlon(pstmp,lat,lon,lat_i,lon_i)
-ps_i = ps0 * numpy.exp( -zh[nlev,:,:]/(Rgas*TREF))
-
+ps0=1000*100
 for k in range(nlev-1,-1,-1):
-    #compute zh
     p = hyam[k]*ps0 + hybm[k]*ps_i
     exner = (p/ps0)**(Rgas/Cp)
     dp =  (hyai[k+1]*ps0 + hybi[k+1]*ps_i) - (hyai[k]*ps0 + hybi[k]*ps_i)
     zh[k,:,:] = zh[k+1,:,:]  + Rgas*dp*(T0 + T1*exner)/(p*g)
     inc = Rgas*dp*(T0 + T1*exner)/(p*g)
-    #print(k,numpy.amin(inc),numpy.amax(inc))
+
 
 for k in range(nlev+1):
     print(k,numpy.amin(zh[k,:,:]),numpy.amax(zh[k,:,:]))
         
-    # mpl line plot of topography:        
+
+wks_type = "pdf"
+outname=outname+"."+wks_type
+print("MPL output file: ",outname)
+
+# mpl line plot of topography:        
 
 
     
