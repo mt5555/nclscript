@@ -258,6 +258,13 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75
         res.mpMinLonF = -180
         res.mpMaxLonF =  0
+    elif projection == "europe":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = 20.
+        res.mpMaxLatF = 75.
+        res.mpMinLonF = -40.
+        res.mpMaxLonF =  40.
     elif projection == "andes":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
