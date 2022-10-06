@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-# Contour over maps of lat/lon data
-# python contour_latlon.py
-#
 #
 # diffps.py  -i input1  -j input2  [options]  varname
 #
