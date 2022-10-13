@@ -506,6 +506,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
         vmax=clev[1]
         nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
 
+    # set_extent[lon_min,lon_max,lat_min,lat_mx]
     if proj=="latlon":
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
@@ -526,6 +527,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
         plotproj=crs.Orthographic(central_longitude=-45.0, central_latitude=45.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_global()
+    elif proj == "europe":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-40, 40, 20, 75],crs=dataproj)
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -562,10 +567,12 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
     if struct:
         data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
         print("MPL plotting structured data (with added cyclic point)")
-        pl=ax.pcolormesh(lon2, lat, data2d_ext,vmin=vmin,vmax=vmax,
-                       transform=dataproj, cmap=cmap)
-        #pl=ax.contourf(lon2, lat, data2d_ext, nlevels,vmin=vmin,vmax=vmax,
-        #               transform=dataproj, cmap=cmap)
+        if nlevels>25:
+            pl=ax.pcolormesh(lon2, lat, data2d_ext,vmin=vmin,vmax=vmax,
+                             transform=dataproj, cmap=cmap)
+        else:
+            pl=ax.contourf(lon2, lat, data2d_ext, nlevels,vmin=vmin,vmax=vmax,
+                           transform=dataproj, cmap=cmap)
     elif compute_tri:
         print("MPL plot using internal Delaunay triangulation")
         # do the triangulation in the plot coordinates for better results
