@@ -8,7 +8,7 @@ from scipy.interpolate import griddata
 
 # needed for ngl_plot
 import Ngl
-import Nio
+from netCDF4 import Dataset
 
 #
 # Input:
@@ -209,7 +209,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     se_num=0
     if os.path.isfile(se_file):
         print("adding to plot:  SE grid from:",se_file)
-        infile = Nio.open_file(se_file,"r")
+        infile = Dataset(se_file,"r")
         se_coord  = infile.variables["coord"][:,:]
         se_connect  = infile.variables["connect1"][:,:]
         se_num=se_connect.shape[0]
@@ -224,7 +224,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 
     cellbounds=False
     if os.path.isfile(scrip_file):
-        infile = Nio.open_file(scrip_file,"r")
+        infile = Dataset(scrip_file,"r")
         clat  = infile.variables["grid_corner_lat"][:,:]
         clon  = infile.variables["grid_corner_lon"][:,:]
         if clon.shape[0] == len(lat):
@@ -543,7 +543,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
     
     compute_tri=True
     if ~struct and os.path.isfile(gllfile):
-        cfile = Nio.open_file(gllfile,"r")
+        cfile = Dataset(gllfile,"r")
         ec=cfile.variables["element_corners"]
         nd=ec.shape
         # by Euler, number of subcells is number of gll nodes -2

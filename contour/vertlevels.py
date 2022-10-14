@@ -1,14 +1,24 @@
 #!/usr/bin/env python
 #
-# vertlevels.py  -i PHIS_file  [-j hyam/ps file]  [-m andes]   PHIS/geos
+# plot vertical level cross section:
 #
-# plot vertical level cross section
+# vertlevels.py  -i PHIS_file  [-j hyam/lon/lat file]  [-m andes]   PHIS_d / geos
 #   default: equator
-#   -m andes   
+#   other options: -m andes
+#
+# E3SM topo files, GLL data, do not include lat/lon coordinates, so we need to get
+# them from the IC file (which many not include PG2 coordinates, only GLL)
+#
+#
+# example:
+# vertlevels.py  -m himalaya  \
+#   -i ~/scratch1/topodata/ne30/USGS-gtopo30_ne30np4_16xdel2-nolim.nc \
+#   -j ~/inputdata/atm/cam/inic/homme/cami_mam3_0000-10-01_ne30np4_L72_c160127.nc \
+#   PHIS
+#
 #
 from __future__ import print_function
 import os, sys, numpy
-#import Nio
 from netCDF4 import Dataset
 from plotutils import myargs, extract_level, interp_to_latlon
 #from matplotlib import pyplot
@@ -26,18 +36,22 @@ if inname2=='':
 
 print('PHIS file=',inname)
 print('vcoord file=',inname2)
-infile = Dataset(file(inname,"r")
+infile = Dataset(inname,"r")
 infile2 = Dataset(inname2,"r")
 outname=inname.split(".nc")[0] + ".topo"
 
 
 nlat=1
-nlon=1024
+nlon=2048
 lat_i = 0
 if proj=='andes':
-    lat_i = numpy.array([-20.0])
+    lat_i = numpy.array([-25.0])
+    xl=-80
+    xr=-40
 if proj=='himalaya':
-    lat_i = numpy.array([30.0])
+    lat_i = numpy.array([35.0])
+    xl=40
+    xr=120
 lon_i = numpy.linspace(-180, 180, nlon,endpoint=False)
 
 
@@ -51,15 +65,20 @@ lon_i = numpy.linspace(-180, 180, nlon,endpoint=False)
 # read PHI and coordinates
 ################################################################
 if var1_read != None:
-    dataf = infile.variables[var1_read][:]
-if "ncol_d" in dataf.dimensions:
-    lat  = infile.variables["lat_d"][:]
-    lon  = infile.variables["lon_d"][:]
-else:
-    lat  = infile.variables["lat"][:]
-    lon  = infile.variables["lon"][:]
+    dataf = infile.variables[var1_read]
+#if "ncol_d" in dataf.dimensions:
+#    lat  = infile2.variables["lat_d"][:]
+#    lon  = infile2.variables["lon_d"][:]
+#else:
+    lat  = infile2.variables["lat"][:]
+    lon  = infile2.variables["lon"][:]
 
-print("PHIS: rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
+#print(dataf.long_name)
+#print(dataf.units)
+#print(dataf.dimensions)
+#print(dataf.shape)
+print(dataf.long_name,dataf.units,dataf.dimensions,dataf.shape)
+print("lon:  shape=",lon.shape)
 if "ncol_d" in dataf.dimensions or "ncol" in dataf.dimensions:
     idx_lat=None
 else:
@@ -78,7 +97,7 @@ levdim = "lev" in dataf.dimensions or "ilev" in dataf.dimensions
 ntimes=1
 times=numpy.array([0])
 if timedim:
-    ntimes = infile.dimensions['time']
+    ntimes = infile.dimensions['time'].size
     times = infile.variables["time"][:]
 
 if timeindex==None or timeindex==-1:
@@ -97,7 +116,7 @@ else:
 nlev=0
 
 print("reading hybrid coordinate data")
-nlev=infile2.dimensions["lev"][:]
+nlev=infile2.dimensions["lev"].size
 lev=infile2.variables["lev"][:]
     
 hyam=infile2.variables['hyam'][:]
@@ -148,7 +167,7 @@ else:
 #ps=infile.variables["DYN_PS"]
 #ps=infile.variables["PS"]
 #ps_i = interp_to_latlon(ps,lat,lon,lat_i,lon_i)
-ps_i = ps0 * numpy.exp( -zh[nlev,:,:]/(Rgas*TREF))
+ps_i = ps0 * numpy.exp( -g*zh[nlev,:,:]/(Rgas*TREF))
 
 
 ph=numpy.empty([nlev,nlat,nlon]) 
@@ -165,36 +184,35 @@ for k in range(nlev-1,-1,-1):
 #    print(k,numpy.amin(zh[k,:,:]),numpy.amax(zh[k,:,:]))
         
 
-outname="topox.pdf"
-print("MPL output file: ",outname)
-
-
 # mpl line plot of topography:        
 fig, axs = plt.subplots()
 fig2, axs2 = plt.subplots()
 
 if len(lat_i)==1:
-    inc=5
+    inc=2
     for k in range(nlev,-1,-inc):
-        axs.plot(lon_i,zh[k,0,:],label='k',color='b')
-    axs.set(xlabel='longitude', ylabel='height (m)',title='levels')
-
-    inc=5
+        axs.plot(lon_i,zh[k,0,:]/1000,label='k',color='b',linewidth=0.5)
+    axs.set(xlabel='longitude', ylabel='height (km)',title='model surfaces')
+    axs.axis([xl, xr, 0, 20])
+    
+    inc=2
     for k in range(nlev-1,-1,-inc):
-        axs2.plot(lon_i,ph[k,0,:],label='k',color='b')
-    axs2.set(xlabel='longitude', ylabel='Pressure (Pa)',title='levels')
-
+        axs2.plot(lon_i,ph[k,0,:]/100,label='k',color='b',linewidth=0.5)
+    axs2.set(xlabel='longitude', ylabel='Pressure (hPa)',title='model surfaces')
+    axs2.axis([xl, xr, 0,1000])
+    axs2.invert_yaxis()
+ 
 
 if len(lon_i)==1:
     axs.plot(lon_i,zh[nlev,:,0],label='k',color='b')
-    axs.set(xlabel='latitude', ylabel='height (m)',title='levels')
+    axs.set(xlabel='latitude', ylabel='height (m)',title='model surfaces')
     
-axs.grid(True)
-plt.show()                                                                                               
-axs2.grid(True)
-plt2.show()                                                                                               
+#axs.grid(True)
+
+#plt.show()                                                                                               
 print("writing plot...")
-plt.savefig("temp.png")
+fig.savefig("zh.png")
+fig2.savefig("ph.png")
 
 
 

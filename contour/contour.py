@@ -7,7 +7,8 @@
 #
 from __future__ import print_function
 import os, numpy
-import Nio, Ngl
+import Ngl
+from netCDF4 import Dataset
 from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon
 from matplotlib import pyplot
 from vertprofile import ngl_vertprofile
@@ -23,7 +24,7 @@ units=""
 longname=""
 print('file=',inname)
 print('contour:',var1,'proj=',proj)
-infile = Nio.open_file(inname,"r")
+infile = Dataset(inname,"r")
 outname=inname.split(".nc")[0] + "."+var1
 
 
@@ -165,7 +166,7 @@ dataf  = infile.variables[var1_read]
 data2d_plot2=numpy.array([])
 if var2_read != None:
     dataf2 = infile.variables[var2_read]
-print("rank=",dataf.rank,"shape=",dataf.shape,"dims: ",dataf.dimensions)
+print(dataf.long_name,dataf.units,dataf.shape,dataf.dimensions)
 
 
 title=var1
@@ -183,7 +184,7 @@ levdim = "lev" in dataf.dimensions or "ilev" in dataf.dimensions
 ntimes=1
 times=numpy.array([0])
 if timedim:
-    ntimes = infile.dimensions['time']
+    ntimes = infile.dimensions['time'].size
     times = infile.variables["time"][:]
 
 if timeindex==None or timeindex==-1:
@@ -202,19 +203,19 @@ else:
 nlev=0
 nlev_data=0
 if levdim:
-    nlev=infile.dimensions["lev"]
+    nlev=infile.dimensions["lev"].size
     lev=infile.variables["lev"][:]
     if "lev" in dataf.dimensions:
         nlev_data=nlev
     if "ilev" in dataf.dimensions:
-        nlev_data=infile.dimensions["ilev"]
+        nlev_data=infile.dimensions["ilev"].size
 
     if klev==None:
         klev=int(3*nlev/4)
-    hyam=infile.variables['hyam']
-    hybm=infile.variables['hybm']
-    hyai=infile.variables['hyai']
-    hybi=infile.variables['hybi']
+    hyam=infile.variables['hyam'][:]
+    hybm=infile.variables['hybm'][:]
+    hyai=infile.variables['hyai'][:]
+    hybi=infile.variables['hybi'][:]
 
 
 
@@ -227,7 +228,7 @@ if "ps" in infile.variables.keys():
     ps=infile.variables["ps"]
 
 if "P0" in infile.variables.keys():
-    ps0=infile.variables["P0"].get_value()
+    ps0=infile.variables["P0"].getValue()
 
 if "ncol_d" in dataf.dimensions:
     lat  = infile.variables["lat_d"][:]
