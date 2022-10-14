@@ -73,11 +73,12 @@ if var1_read != None:
     lat  = infile2.variables["lat"][:]
     lon  = infile2.variables["lon"][:]
 
-#print(dataf.long_name)
-#print(dataf.units)
-#print(dataf.dimensions)
-#print(dataf.shape)
-print(dataf.long_name,dataf.units,dataf.dimensions,dataf.shape)
+print("dataf :",dataf.dimensions,dataf.shape)
+if hasattr(dataf,"long_name"):
+    print("dataf long_name=",dataf.long_name
+if hasattr(dataf,"units"):
+    print("dataf units=",dataf.units
+
 print("lon:  shape=",lon.shape)
 if "ncol_d" in dataf.dimensions or "ncol" in dataf.dimensions:
     idx_lat=None

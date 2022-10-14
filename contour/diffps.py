@@ -40,9 +40,9 @@ else:
 
 
 dataf  = infile.variables[var1]
-print(dataf.long_name,dataf.units,dataf.shape,dataf.dimensions)
+print("dataf: ",dataf.shape,dataf.dimensions)
 dataf2  = infile2.variables[var1]
-print(dataf2.long_name,dataf2.units,dataf2.shape,dataf2.dimensions)
+print("dataf2: ",dataf2.shape,dataf2.dimensions)
 
 title=var1
 if longname=="" and hasattr(dataf,"long_name"):

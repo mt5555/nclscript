@@ -166,7 +166,7 @@ dataf  = infile.variables[var1_read]
 data2d_plot2=numpy.array([])
 if var2_read != None:
     dataf2 = infile.variables[var2_read]
-print(dataf.long_name,dataf.units,dataf.shape,dataf.dimensions)
+print("dataf: ",dataf.shape,dataf.dimensions)
 
 
 title=var1
