@@ -2,7 +2,6 @@ import numpy, os, sys, getopt
 
 # needed for ngl_plot
 import Ngl
-import Nio
 
 def ngl_vertprofile(wks,coldata,lev,vrange,title,units):
 

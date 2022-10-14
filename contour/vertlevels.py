@@ -8,7 +8,8 @@
 #
 from __future__ import print_function
 import os, sys, numpy
-import Nio
+#import Nio
+from netCDF4 import Dataset
 from plotutils import myargs, extract_level, interp_to_latlon
 #from matplotlib import pyplot
 import matplotlib.pyplot as plt
@@ -25,8 +26,8 @@ if inname2=='':
 
 print('PHIS file=',inname)
 print('vcoord file=',inname2)
-infile = Nio.open_file(inname,"r")
-infile2 = Nio.open_file(inname2,"r")
+infile = Dataset(file(inname,"r")
+infile2 = Dataset(inname2,"r")
 outname=inname.split(".nc")[0] + ".topo"
 
 
@@ -50,7 +51,7 @@ lon_i = numpy.linspace(-180, 180, nlon,endpoint=False)
 # read PHI and coordinates
 ################################################################
 if var1_read != None:
-    dataf = infile.variables[var1_read]
+    dataf = infile.variables[var1_read][:]
 if "ncol_d" in dataf.dimensions:
     lat  = infile.variables["lat_d"][:]
     lon  = infile.variables["lon_d"][:]
@@ -96,13 +97,13 @@ else:
 nlev=0
 
 print("reading hybrid coordinate data")
-nlev=infile2.dimensions["lev"]
+nlev=infile2.dimensions["lev"][:]
 lev=infile2.variables["lev"][:]
     
-hyam=infile2.variables['hyam']
-hybm=infile2.variables['hybm']
-hyai=infile2.variables['hyai']
-hybi=infile2.variables['hybi']
+hyam=infile2.variables['hyam'][:]
+hybm=infile2.variables['hybm'][:]
+hyai=infile2.variables['hyai'][:]
+hybi=infile2.variables['hybi'][:]
 print("nlev=",nlev)
 
 
