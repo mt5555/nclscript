@@ -24,7 +24,7 @@ from netCDF4 import Dataset
 #
 #   scrip_file      option for NGL plots, user specified dual grid
 #   gll_file        option for matplotlib, user specified subcells for triangulation
-#   se_file         option to NGL plots, to draw spectral element mesh
+#   se_file         option to NGL plots, to draw spectral element mesh on top of output
 # 
 #
 # can handle many types of plots:
@@ -32,11 +32,17 @@ from netCDF4 import Dataset
 # 1. latlon data:  data(nlat,nlon)  NGL and MPL.   best results.
 # 2. unstructured  dual grid:  NGL only
 #                  2a: construct dual grid via triangulation.  UGLY
-#                  2b: specify dual grid from SCRIP file.  BEST FOR PG2 data
+#                  2b: specify dual grid (-s scripfile.nc).  BEST FOR PG2 data
+#                      can shade each PG2 cell
+#                      but does it still have white borders around each cell?
 # 3. unstructured: vertex data:  MPL only
-#                  3a: construct triangulation in plot coordinates BEST FOR GLL DATA
-#                  3b: construct triangulation from subcell grid
-#
+#                  3a: construct triangulation in plot coordinates
+#                      gouraud shading of vertex data.  BEST FOR GLL DATA
+#                      how does it work for PG2 data?
+#                  3b: construct triangulation from GLL subcells (-g subcell.nc)
+#                      gouraud shading of vertex data (not as good as 3a)
+#                  3c: Ben Hillman has code to solid fill each cell
+#                        not implimented here
 #
 
 def myargs(argv):
