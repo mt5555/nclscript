@@ -170,8 +170,11 @@ print("dataf: ",dataf.shape,dataf.dimensions)
 
 
 title=var1
-if longname=="" and hasattr(dataf,"long_name"):
-    longname=dataf.long_name
+if longname=="":
+    if hasattr(dataf,"long_name"):
+        longname=dataf.long_name
+    else:
+        longname=var1
     title=""
 if units=="" and hasattr(dataf,"units"):
     units=dataf.units
@@ -402,16 +405,17 @@ for t in range(t1,t2):
         else:
             print("calling mpl_plot")
             mpl_plot(data_i,lon_i,lat_i,title,longname,units,
-                     proj,clev,cmap,gll_file)
+                     proj,clev,cmap,scrip_file,gll_file)
             pyplot.savefig(outname,dpi=300,orientation="portrait")
     elif use_ngl:
         ngl_plot(wks,data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file,se_file,data2d_plot2)
     else:
         mpl_plot(data2d,lon,lat,title,longname,units,
-                 proj,clev,cmap,gll_file)
-        pyplot.savefig(outname,dpi=300,orientation="portrait")
+                 proj,clev,cmap,scrip_file,gll_file)
         #pyplot.show()
+        pyplot.savefig(outname,dpi=300,orientation="portrait")
+
 
 
     #

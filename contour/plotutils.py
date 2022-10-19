@@ -41,8 +41,8 @@ from netCDF4 import Dataset
 #                      how does it work for PG2 data?
 #                  3b: construct triangulation from GLL subcells (-g subcell.nc)
 #                      gouraud shading of vertex data (not as good as 3a)
-#                  3c: Ben Hillman has code to solid fill each cell
-#                        not implimented here
+#                  3c: solid fill each scrip cell (-s scripfile.nc)
+#                        PolyCollection approach from Ben Hillman
 #
 
 def myargs(argv):
@@ -496,7 +496,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 
     
 
-def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
+def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfile):
     
     # Setup the plot
     figure = pyplot.figure() #(figsize=(15, 10))
@@ -541,7 +541,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
         print("Bad projection argument: ",projection)
         sys.exit(3)
 
-    ax.coastlines(linewidth=0.2)
+    # tried to download data set        
+    #ax.coastlines(linewidth=0.2)
     
     # structured lat/lon or unstructured data?
     struct=False
@@ -567,6 +568,18 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
             tri=tri-1   # zero indexing
             compute_tri=False
 
+    cellbounds=False
+    if os.path.isfile(scrip_file):
+        infile = Dataset(scrip_file,"r")
+        clat  = infile.variables["grid_corner_lat"][:,:]
+        clon  = infile.variables["grid_corner_lon"][:,:]
+        # if in Radians or radians, convert to degrees
+        if "adian" in infile.variables["grid_corner_lat"].units:
+            clon=clon*180/numpy.pi
+            clat=clat*180/numpy.pi
+        if clon.shape[0] == len(lat):
+            cellbounds=True
+            compute_tri=False
 
     print("colormap min/max=",vmin,vmax)
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
@@ -590,7 +603,35 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
         
         pl = ax.tripcolor(tc[:,0],tc[:,1], datai,vmin=vmin, vmax=vmax,
                           shading='gouraud',cmap=cmap)
+    elif cellbounds:
+        from matplotlib.collections import PolyCollection
+        print("MPL plot using scrip cells")
+        # latlon->cartesian->local coords. this will put any seams at plot boundaries
+        proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
+        x3d = proj3d.transform_points(dataproj,clon[:,:],clat[:,:])
+        # x3d[:,:,0:3] x,y,z coords of 
+        ccoords = plotproj.transform_points(proj3d,x3d[:,:,0],x3d[:,:,1],x3d[:,:,2])
+        # ccoords will be [:,:,0:2]  for lat,lon,r but r=0
+        # remove bad cells:
+        # cells that stradle any coordinate branch cut, or
+        # are non-visible
+        x0=numpy.amin(ccoords[:,:,:],1)
+        x1=numpy.amax(ccoords[:,:,:],1)
+        d= ((x0[:,0]-x1[:,0])**2 + (x0[:,1]-x1[:,1])**2)**0.5
+        dmax=max(d)
+        dmin=min(d)
+        print("cell diameter min,max:",dmin,dmax)
+        xi=(d < 100*dmin)  # and (x1!=numpy.inf) and (y1!=numpy.inf)
+        datai=data2d[:][xi]
+        print("cells removed: ",len(data2d)-len(datai),"out of",len(data2d))
+        corners=numpy.stack([ccoords[xi,:,0],ccoords[xi,:,1]],axis=2)
+        
+        # create cells
+        p = PolyCollection(corners, array=datai, antialiaseds=True)
+        p.set_clim([vmin,vmax])
+        pl=ax.add_collection(p)
     else:
+
         print("MPL plot using gll subcell triangulation")
         # latlon->cartesian->local coords. this will put any seams at plot boundaries
         proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
@@ -619,10 +660,14 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,gllfile):
         # plot some of the triangles to make sure they are ok:
         #ax.triplot(tcoords[:,0],tcoords[:,1],tri[1:100,:],'go-')
         
-    
-    cb = pyplot.colorbar(pl, orientation='horizontal', 
-                         label='%s (%s)'%(longname, units),shrink=0.75, pad=0.1)
+
+    if units=="":
+        cb = pyplot.colorbar(pl, orientation='horizontal', 
+                             label='%s'%(longname),shrink=0.75, pad=0.1)
+    else:
+        cb = pyplot.colorbar(pl, orientation='horizontal', 
+                             label='%s (%s)'%(longname, units),shrink=0.75, pad=0.1)
 
     # Plot GLL nodes for perspective
     #pl = ax.plot(lon, lat, 'k.', projection=dataproj, markersize=1)
-    
+
