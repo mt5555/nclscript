@@ -3,11 +3,16 @@ from string import *
 #import os, commands, getopt, sys, exceptions
 import numpy as np
 import matplotlib.pyplot as plt
-
-# read time, convert to days since start
+#
+# simple script to plot x-y curve from text file
+#
+#
+# read in data (y axis data):
 print("reading file...")
 data = np.loadtxt("tbot.out",usecols=(1,))
 
+# read in time ( x axis data )
+# or compute time based on knowledge of timestep between samples:
 # statefreq=24, timestep=8.33s
 delta = 24*8.3333333333333333333/(24*3600.)
 t = np.arange(0, delta*data.size, delta)
