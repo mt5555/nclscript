@@ -152,7 +152,7 @@ if var1=="POTT":
 
 
 compute_avedx=False
-if var1=="ave_dx":
+if var1=="ave_dx" or var1=="ave_dx_T":
     print("Special processing:  ave_dx=(min_dx+max_dx)/2") 
     compute_avedx=True
     var1_read="min_dx"
@@ -215,6 +215,8 @@ if levdim:
 
     if klev==None:
         klev=int(3*nlev/4)
+
+if "hyam" in infile.variables.keys():
     hyam=infile.variables['hyam'][:]
     hybm=infile.variables['hybm'][:]
     hyai=infile.variables['hyai'][:]
@@ -354,7 +356,13 @@ for t in range(t1,t2):
         if compute_avedx:
             data2d_2=dataf2[:]
             data2d=numpy.sqrt(data2d*data2d_2)
-            data2d_plot2=ps[t,...]
+            if var1=="ave_dx_T":
+                dataf_T  = infile.variables["T"]
+                print("reading T to add to avedx plot",dataf_T.shape,ps.shape)
+                data2d_plot2 = extract_level(dataf_T[6,...],klev,[750.0],ps[6,...],hyam,hybm)
+            else:
+                # plot contour lines of ps on top of avedx:
+                data2d_plot2=ps[t,...]
 
     if scale:
         data2d=data2d*scale

@@ -368,6 +368,16 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLonF = 20.
         res.cnLinesOn             = True          # Turn off contour lines
         res.mpOutlineOn          = False
+    elif projection == "barotopo-nc2":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        #res.mpCenterLonF         = -90.
+        res.mpMinLatF = 15. 
+        res.mpMaxLatF = 75. 
+        res.mpMinLonF = -150.
+        res.mpMaxLonF = 20.
+        res.mpOutlineOn          = False
+        res.cnLinesOn            = False
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -449,15 +459,25 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res2.nglDraw  = False
         map1 = Ngl.map(wks,res2)
         map2 = Ngl.contour(wks,data2d,res2)
-        print("Adding contour line plot...")
+        print("Adding contour line plot from data2d_2...")
+        print("data2d_2 min/max=",numpy.amin(data2d_2),numpy.amax(data2d_2))
+
         res3=res
         res3.mpOutlineOn          = False
         res3.cnFillOn             = False         # Turn on contour fill.
         res3.cnLinesOn            = True          # Turn off contour lines
         #res3.cnLineColor          = "White"
-        res3.cnLevelSelectionMode  = "AutomaticLevels"
-        res3.cnMaxLevelCount = 5
-        res3.cnLevelSpacingF=1e5   # ignored, but set to prevent warnings
+
+        #res3.cnLevelSelectionMode  = "AutomaticLevels"
+        #res3.cnMaxLevelCount = 5
+        #res3.cnLevelSpacingF=1e5   # ignored, but set to prevent warnings
+
+        res3.cnMinLevelValF=200
+        res3.cnMaxLevelValF=300
+        res3.cnMaxLevelCount = 100
+        res3.cnLevelSpacingF=5  
+        res3.cnLineThicknessF = 1.5
+
         map3 = Ngl.contour(wks,data2d_2,res3)
         Ngl.overlay(map1,map2)
         Ngl.overlay(map1,map3)
@@ -486,6 +506,14 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
             x1=se_lat[x-1]
             x2=x1[0:1]
             plat=numpy.concatenate( [x1,x2])
+
+            # se_coord[0:2,x-1] = for element corners in cartesian coordinate.
+            # compute diagonal distance:
+            #xcoord=se_coord[:,x-1]
+            #d1=numpy.sum((xcoord[:,0]-xcoord[:,2])**2)
+            #d2=numpy.sum((xcoord[:,1]-xcoord[:,3])**2)
+            #dist2 = ((numpy.sqrt(d1/2)+numpy.sqrt(d2/2))/2)* 6.4e3  # dist in km
+            #if (dist2> 80):    # NE30 elements are about 325km
             Ngl.polyline(wks,map1,plon,plat,gsres)
         del gsres
             
