@@ -162,6 +162,7 @@ if var1=="ave_dx":
 
 
     
+print("reading dataf name=",var1_read)    
 dataf  = infile.variables[var1_read]
 data2d_plot2=numpy.array([])
 if var2_read != None:
@@ -207,7 +208,7 @@ nlev=0
 nlev_data=0
 if levdim:
     nlev=infile.dimensions["lev"].size
-    lev=infile.variables["lev"][:]
+    #lev=infile.variables["lev"][:]
     if "lev" in dataf.dimensions:
         nlev_data=nlev
     if "ilev" in dataf.dimensions:
@@ -226,9 +227,11 @@ if levdim:
 # get correct PS variable
 ################################################################
 ps=numpy.empty([ntimes,1])  # dummy array, wont be used, but needs to be indexed    
+have_ps=False
 if "ps" in infile.variables.keys():
     ps0=1000*100
     ps=infile.variables["ps"]
+    have_ps=True
 
 if "P0" in infile.variables.keys():
     ps0=infile.variables["P0"].getValue()
@@ -238,16 +241,21 @@ if "ncol_d" in dataf.dimensions:
     lon  = infile.variables["lon_d"][:]
     PSname="DYN_PS"
     ps=infile.variables["DYN_PS"]
+    have_ps=True
 else:
     lat  = infile.variables["lat"][:]
     lon  = infile.variables["lon"][:]
     PSname="PS"
     if "PS" in infile.variables.keys():
         ps=infile.variables["PS"]
+        have_ps=True
+
 
 if plev != None:
+    if not have_ps:
+        print("Error: need PS to interpolate to plev=",plev)
+        sys.exit(2)
     print("Interpolating to pressure level = ",plev,"using",PSname)
-
 
 
     
@@ -309,8 +317,16 @@ for t in range(t1,t2):
     # 2D maps
     #
     if (timedim and levdim):
-        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev)
-        data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm)
+        dimname=dataf.dimensions
+        if "lev" in dimname:
+            kidx=dimname.index("lev")
+        if "ilev" in dimname:
+            kidx=dimname.index("ilev")
+        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
+
+        data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)
+        print("dataf dimensions=",dataf.dimensions)
+        print("data2d shape=",data2d.shape)
 
         if compute_dtheta_dp or compute_dt_dp:
             data2dm1=extract_level(dataf[t,...],klev-1,plev,ps[t,...],hyam,hybm)
@@ -422,7 +438,7 @@ for t in range(t1,t2):
     # 1D vertical profile at a specified point
     #
     # data2d[min_i1] will give value for either 1D or 2D data
-    if levdim and nlev_data>0:
+    if levdim and nlev_data>0 and have_ps:
         ncols=len((min_i1,max_i1))
         if var1=="Th" or var1=="POTT":
             ncols=ncols*3  # add ref profile
