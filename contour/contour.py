@@ -73,7 +73,7 @@ else:
 ################################################################
 # custom scalings for certain varaiables
 ################################################################
-if var1=="PRECT" or var1=="PRECC" or var1=="PRECL":     
+if var1=="PRECT" or var1=="PRECC" or var1=="PRECL" or var1=="PrecipTotalSurfMassFlux":     
     scale=1000.0*(24*3600)  # convert to mm/day
     units="mm/day"
 
@@ -106,6 +106,12 @@ if var1=="DZ3":
     compute_dz=True
     var1_read="DYN_Z3"
     longname="DYN_DZ"
+
+compute_windstress=False
+if var1=="surf_mom_flux":
+    print("Special processing:  windstress=surf_mom_flux^2") 
+    compute_windstress=True
+
 
 compute_prect=False
 if var1=="PRECT" and ~("PRECT" in infile.variables.keys()):
@@ -319,15 +325,13 @@ for t in range(t1,t2):
     # 2D maps
     #
     if (timedim and levdim):
+        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
         dimname=dataf.dimensions
         if "lev" in dimname:
             kidx=dimname.index("lev")
         if "ilev" in dimname:
             kidx=dimname.index("ilev")
-        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
-
         data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)
-        print("dataf dimensions=",dataf.dimensions)
         print("data2d shape=",data2d.shape)
 
         if compute_dtheta_dp or compute_dt_dp:
@@ -359,10 +363,17 @@ for t in range(t1,t2):
 
 
     elif (timedim):
+        print(t+1,"time=",times[t]," time & space dimensions only")
+        dimname=dataf.dimensions
+
         data2d=dataf[t,...]
         if compute_prect:
-            data3d=data2d + PRECC[t,...]
+            data2d=data2d + PRECC[t,...]
             longname="PRECT"
+        if compute_windstress:
+            temp=data2d[:,0]**2 + data2d[:,0]**2
+            data2d=temp
+            longname="wind stress"
         print(t,"time=",times[t])
     elif (levdim):
         print("k=",klev,"/",nlev_data,"plev=",plev)
