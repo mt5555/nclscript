@@ -364,6 +364,13 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75.
         res.mpMinLonF = 45.
         res.mpMaxLonF = 175.
+    elif projection == "debug3":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = 10.
+        res.mpMaxLatF = 50.
+        res.mpMinLonF = 60.
+        res.mpMaxLonF = 100.
     elif projection == "baroclinic":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
