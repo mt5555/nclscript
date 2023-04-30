@@ -191,10 +191,10 @@ def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
 def extract_level(dataf,klev,plev,PS,hyam,hybm,kidx=0):
 
     if kidx==0:  # intepolate first index:
-        print("Interpolating 1st dimension")
         if plev == None:
             data2d=dataf[klev,...]
         else:
+            print("Interpolating 1st dimension")
             # vertical interpolation
             v_interp = 2   # type of interpolation: 1 = linear, 2 = log, 3 = loglog
             extrap = True  # is extrapolation desired if data is outside the range of PS
@@ -589,6 +589,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-40, 40, 20, 75],crs=dataproj)
+    elif proj == "debug3":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([60, 100, 10, 50],crs=dataproj)
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -722,4 +726,80 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
 
     # Plot GLL nodes for perspective
     #pl = ax.plot(lon, lat, 'k.', projection=dataproj, markersize=1)
+
+
+
+def mpl_streamlines(data2d,data2d_2,lon,lat,title,longname,units,proj,clev,cmap):
+    
+    # Setup the plot
+    figure = pyplot.figure() #(figsize=(15, 10))
+    dataproj=crs.PlateCarree()
+
+    # pcolor/tripcolor doesn't use nelvels or contour intervals
+    if len(clev)==1:
+        vmin=None
+        vmax=None
+        nlevels=int(round(clev[0]))
+    else:
+        vmin=clev[0]
+        vmax=clev[1]
+        nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
+    print("num contour levels=",nlevels)
+
+    # set_extent[lon_min,lon_max,lat_min,lat_mx]
+    if proj=="latlon":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
+    elif proj=="US1":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-180, 0, -30, 75],crs=dataproj)
+    elif proj=="andes":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-100, -40, -40, 15],crs=dataproj)
+    elif proj=="himalaya":
+        plotproj=crs.PlateCarree(central_longitude=90.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([50, 110, 0, 60],crs=dataproj)
+    elif proj=="oro":
+        plotproj=crs.Orthographic(central_longitude=-45.0, central_latitude=45.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
+    elif proj == "europe":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-40, 40, 20, 75],crs=dataproj)
+    elif proj == "debug3":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([60, 100, 10, 50],crs=dataproj)
+    else:
+        print("Bad projection argument: ",proj)
+        sys.exit(3)
+
+    # structured lat/lon or unstructured data?
+    struct=False
+    if len(lon)*len(lat) == numpy.prod(data2d.shape): struct=True
+    if not struct:
+        print("streamlines requires lat/lon data")
+        sys.exit(2)
+        
+    print("colormap min/max=",vmin,vmax)
+    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
+
+    
+    data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
+    data2d_2_ext, lon3 = add_cyclic_point(data2d_2, coord=lon,axis=1)
+    magnitude = numpy.sqrt(data2d_ext**2 + data2d_2_ext**2)
+    pl=ax.streamplot(lon2, lat, data2d_ext, data2d_2_ext, transform=dataproj,  linewidth=2, density=2, color=magnitude)
+
+    if units=="":
+        cb = pyplot.colorbar(pl.lines, orientation='horizontal', 
+                             label='%s'%(longname),shrink=0.75, pad=0.1)
+    else:
+        cb = pyplot.colorbar(pl.lines, orientation='horizontal', 
+                             label='%s (%s)'%(longname, units),shrink=0.75, pad=0.1)
+
 
