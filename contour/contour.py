@@ -9,7 +9,7 @@ from __future__ import print_function
 import os, numpy
 import Ngl
 from netCDF4 import Dataset
-from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon
+from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon, mpl_streamlines
 from matplotlib import pyplot
 from vertprofile import ngl_vertprofile
 
@@ -165,6 +165,16 @@ if var1=="ave_dx" or var1=="ave_dx_T":
     var2_read="max_dx"
     longname="ave_dx"
     units="km"
+
+
+compute_streamlines=False
+if var1=="stream_uv":
+    print("Special processing:  ave_dx=(min_dx+max_dx)/2") 
+    compute_streamlines=True
+    var1_read="u"
+    var2_read="v"
+    longname="velocity"
+    units="m/s"
 
 
     
@@ -325,14 +335,17 @@ for t in range(t1,t2):
     # 2D maps
     #
     if (timedim and levdim):
-        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
         dimname=dataf.dimensions
         if "lev" in dimname:
             kidx=dimname.index("lev")
         if "ilev" in dimname:
             kidx=dimname.index("ilev")
+        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
         data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)
         print("data2d shape=",data2d.shape)
+
+        if compute_streamlines:
+            data2d_2=extract_level(dataf2[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)            
 
         if compute_dtheta_dp or compute_dt_dp:
             data2dm1=extract_level(dataf[t,...],klev-1,plev,ps[t,...],hyam,hybm)
@@ -438,19 +451,29 @@ for t in range(t1,t2):
             ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
                      proj,clev,cmap,scrip_file,se_file)
         else:
-            print("calling mpl_plot")
-            mpl_plot(data_i,lon_i,lat_i,title,longname,units,
-                     proj,clev,cmap,scrip_file,gll_file)
+            if compute_streamlines:
+                data_i_2=interp_to_latlon(data2d_2,lat,lon,lat_i,lon_i)
+                mpl_streamlines(data_i,data_i_2,lon_i,lat_i,title,longname,units,
+                         proj,clev,cmap)
+            else:
+                print("calling mpl_plot")
+                mpl_plot(data_i,lon_i,lat_i,title,longname,units,
+                         proj,clev,cmap,scrip_file,gll_file)
             pyplot.savefig(outname,dpi=300,orientation="portrait")
+            pyplot.close()
     elif use_ngl:
         ngl_plot(wks,data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file,se_file,data2d_plot2)
     else:
-        mpl_plot(data2d,lon,lat,title,longname,units,
+        if compute_streamlines:
+            mpl_streamlines(data2d,data2d_2,lon,lat,title,longname,units,
+                            proj,clev,cmap)
+        else:
+            mpl_plot(data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file,gll_file)
         #pyplot.show()
         pyplot.savefig(outname,dpi=300,orientation="portrait")
-
+        pyplot.close()
 
 
     #
@@ -505,7 +528,8 @@ for t in range(t1,t2):
             else:
                 p_all[:,icols]=p_i
             icols=icols+1
-            if var1=="Th" or var1=="POTT":
+            if False and (var1=="Th" or var1=="POTT"):
+                print("Adding Th reference profiles")
                 exner=(p/ps0)**.2856  # kappa
                 coldata_all[:,icols]=97/exner + 191   # ECMWF
                 p_all[:,icols]=p
