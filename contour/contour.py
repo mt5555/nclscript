@@ -480,7 +480,7 @@ for t in range(t1,t2):
     # 1D vertical profile at a specified point
     #
     # data2d[min_i1] will give value for either 1D or 2D data
-    if levdim and nlev_data>0 and have_ps:
+    if levdim and nlev_data>0 and have_ps and use_ngl:
         ncols=len((min_i1,max_i1))
         if var1=="Th" or var1=="POTT":
             ncols=ncols*3  # add ref profile
