@@ -71,7 +71,7 @@ def myargs(argv):
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax       contour level min,max with 40 levels')
         print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
-        print (name,' -c cmin,cmax,cinc,logbase  log levels, min,max,ratio,logbase')
+        print (name,' -c cmin,cmax,cinc,logbase  log levels, min,max,inc (in log space),base (2 or 10)')
         print (name,' -m map projeciton  latlon,US1,oro,andes,hamalaya,etc...')
         print (name,' -r 180x360  remap to lat/lon uni grid')
         print (name,' -r 181x360  remap to lat/lon cap grid')
@@ -263,18 +263,18 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.cnLevelSelectionMode  = "AutomaticLevels"
         res.cnMaxLevelCount = clev[0]
         nlevels=clev[0]
-    elif  1 :
-        # hack in log spacing
-        # .01 .1 1 10
-         
-        c0=numpy.log10(clev[0])
-        c1=numpy.log10(clev[1])
-        cinc=numpy.log10(clev[2])
+    elif len(clev)==4:
+        # log spacing
+        cbase=clev[3]
+        c0=numpy.log(clev[0])/numpy.log(cbase)
+        c1=numpy.log(clev[1])/numpy.log(cbase)
+        cinc=clev[2]
+
         #nlevels=(clev[1]-clev[0])/clev[2]
         nlevels=(c1-c0)/cinc
         clevs=[ c0+i*cinc  for i in range(1+round(nlevels))]
-        clevs=numpy.power(10e0,clevs)
-        print("log cinc=",nlevels,cinc)
+        clevs=numpy.power(cbase,clevs)
+        print("nlevels=",nlevels," lev spacing ratio= ",cbase,"^",cinc)
         print("log clevs=",clevs)
 
         res.cnLevelSelectionMode = "ExplicitLevels" 
