@@ -316,7 +316,7 @@ if use_ngl:
             cmap='MPL_RdYlBu'
             #cmap="BlueYellowRed"
 
-    if var1=="ps" and len(clev)>2:
+    if var1=="ps" and len(clev)==3:
         # custom colormap with center at 1000mb
         cmap = Ngl.read_colormap_file("MPL_RdYlBu")
         n=cmap.shape

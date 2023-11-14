@@ -71,6 +71,7 @@ def myargs(argv):
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax       contour level min,max with 40 levels')
         print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
+        print (name,' -c cmin,cmax,cinc,logbase  log levels, min,max,ratio,logbase')
         print (name,' -m map projeciton  latlon,US1,oro,andes,hamalaya,etc...')
         print (name,' -r 180x360  remap to lat/lon uni grid')
         print (name,' -r 181x360  remap to lat/lon cap grid')
@@ -583,10 +584,17 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         vmin=None
         vmax=None
         nlevels=int(round(clev[0]))
-    else:
+    elif len(clev)==3:
         vmin=clev[0]
         vmax=clev[1]
         nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
+    #elif len(clev)==4:
+    #not all MPL plotting options support list of levels
+    else:
+        print("Error: mpl len(clev) <> 1,3")
+        sys.exit(1)
+
+            
     print("num contour levels=",nlevels)
 
     # set_extent[lon_min,lon_max,lat_min,lat_mx]
