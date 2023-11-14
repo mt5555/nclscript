@@ -262,12 +262,30 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.cnLevelSelectionMode  = "AutomaticLevels"
         res.cnMaxLevelCount = clev[0]
         nlevels=clev[0]
+    elif  1 :
+        # hack in log spacing
+        # .01 .1 1 10
+         
+        c0=numpy.log10(clev[0])
+        c1=numpy.log10(clev[1])
+        cinc=numpy.log10(clev[2])
+        #nlevels=(clev[1]-clev[0])/clev[2]
+        nlevels=(c1-c0)/cinc
+        clevs=[ c0+i*cinc  for i in range(1+round(nlevels))]
+        clevs=numpy.power(10e0,clevs)
+        print("log cinc=",nlevels,cinc)
+        print("log clevs=",clevs)
+
+        res.cnLevelSelectionMode = "ExplicitLevels" 
+        res.cnLevels=clevs
     else:
         res.cnLevelSelectionMode  = "ManualLevels"
         res.cnMinLevelValF=clev[0]
         res.cnMaxLevelValF=clev[1]
         res.cnLevelSpacingF=clev[2]
         nlevels=(clev[1]-clev[0])/clev[2]
+
+
 
 
 # defaults. some projection options might change:
@@ -324,6 +342,13 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 15.
         res.mpMinLonF = -100.
         res.mpMaxLonF =  -40.
+    elif projection == "pacific1":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = -20.
+        res.mpMaxLatF = 60.
+        res.mpMinLonF = -180.
+        res.mpMaxLonF =  -80.
     elif projection == "andes2":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -442,17 +467,17 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     
 
 
+    print("Title: ",title)
+    print("Longname: ",longname)
     
     res.tiMainString = title
-    print("Title: ",res.tiMainString)
-    print("Longname: ",longname)
 
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
     if res.cnLevelSelectionMode == "ManualLevels":
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
         print("number of contour levels:",nlevels)
-    else:
+    elif res.cnLevelSelectionMode=="AutomaticLevels":
         print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
 
 
@@ -514,8 +539,8 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     #-- write variable long_name and units to the plot
     txres = Ngl.Resources()
     txres.txFontHeightF = 0.016
-    Ngl.text_ndc(wks,longname,0.14,0.82,txres)
-    Ngl.text_ndc(wks,units, 0.95,0.82,txres)
+    Ngl.text_ndc(wks,longname,0.20,0.95,txres)
+    Ngl.text_ndc(wks,units, 0.85,0.95,txres)
     del txres
 
     if se_num>0:

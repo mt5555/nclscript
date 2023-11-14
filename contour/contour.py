@@ -30,15 +30,25 @@ outname=inname.split(".nc")[0] + "."+var1
 
 
 ################################################################
+# custom axis for vertical profiles
+################################################################
+ybnds=[]
+xbnds=[]
+if var1=="dtheta_dp":
+    ybnds=[-.4,.2]
+    ybnds=[-.01,.002]
+if var1=="dt_dp":
+    ybnds=[-.01,.002]
+if var1=="Th":
+    ybnds=[0,1000]
+    xbnds=[150,450]
+if var1=="div":
+    ybnds=[0,1000]
+    xbnds=[-.0008,.0004]
+
+################################################################
 # custom contour levels for certain varaiables
 ################################################################
-vrange=[]
-if var1=="dtheta_dp":
-    vrange=[-.4,.2]
-    vrange=[-.01,.002]
-if var1=="dt_dp":
-    vrange=[-.01,.002]
-
 if clev==None:
     clev=[40]   # 40 levels, no range specified
 
@@ -217,6 +227,11 @@ else:
     t1=timeindex     # user specified index
     t2=timeindex+1
 
+time_label=False
+if len(range(t1,t2)) > 1 :
+    time_label=True   # add t= label to plots
+    print("Adding t= label to plots")
+
 ################################################################
 # level varaibles
 ################################################################
@@ -258,8 +273,9 @@ if "ncol_d" in dataf.dimensions:
     lat  = infile.variables["lat_d"][:]
     lon  = infile.variables["lon_d"][:]
     PSname="DYN_PS"
-    ps=infile.variables["DYN_PS"]
-    have_ps=True
+    if "DYN_PS" in infile.variables.keys():
+        ps=infile.variables["DYN_PS"]
+        have_ps=True
 else:
     lat  = infile.variables["lat"][:]
     lon  = infile.variables["lon"][:]
@@ -431,6 +447,11 @@ for t in range(t1,t2):
     print("scaled data2d min=",data2dmin,"at",min_i1,"lon=",lonmin,'lat=',latmin)
     print("scaled data2d max=",data2dmax,"at",max_i1,"lon=",lonmax,'lat=',latmax)
 
+    if time_label:
+        title=longname
+        longname_t="t="+str(times[t])
+    else:
+        longname_t=longname
 
     # should we interpolate?
     if len(lon)*len(lat) != numpy.prod(data2d.shape) and nlatlon_interp:
@@ -448,7 +469,7 @@ for t in range(t1,t2):
             
         data_i=interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
         if use_ngl:
-            ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
+            ngl_plot(wks,data_i,lon_i,lat_i,title,longname_t,units,
                      proj,clev,cmap,scrip_file,se_file)
         else:
             if compute_streamlines:
@@ -462,7 +483,7 @@ for t in range(t1,t2):
             pyplot.savefig(outname,dpi=300,orientation="portrait")
             pyplot.close()
     elif use_ngl:
-        ngl_plot(wks,data2d,lon,lat,title,longname,units,
+        ngl_plot(wks,data2d,lon,lat,title,longname_t,units,
                  proj,clev,cmap,scrip_file,se_file,data2d_plot2)
     else:
         if compute_streamlines:
@@ -480,10 +501,21 @@ for t in range(t1,t2):
     # 1D vertical profile at a specified point
     #
     # data2d[min_i1] will give value for either 1D or 2D data
+    min_i1=[183,115]
+    max_i1=[183,112]
+    latmin  = lat[min_i1[0]]
+    lonmin  = lon[min_i1[1]]
+    latmax  = lat[max_i1[0]]
+    lonmax  = lon[max_i1[1]]
+    print("vert profile1 at ",min_i1,"lon=",lonmin,'lat=',latmin)
+    print("vert profile2 at ",max_i1,"lon=",lonmax,'lat=',latmax)
+
+
     if levdim and nlev_data>0 and have_ps and use_ngl:
         ncols=len((min_i1,max_i1))
-        if var1=="Th" or var1=="POTT":
-            ncols=ncols*3  # add ref profile
+        # add ref profile to plot?
+        #if var1=="Th" or var1=="POTT":
+        #    ncols=ncols*3
         coldata_all=numpy.zeros([nlev_data,ncols])
         p_all=numpy.zeros([nlev_data,ncols])
         icols=0
@@ -539,7 +571,7 @@ for t in range(t1,t2):
                 icols=icols+1
 
         kstart=int(nlev/3)
-        ngl_vertprofile(wks_v,coldata_all[kstart:,...],p_all[kstart:,...],vrange,longname,units)
+        ngl_vertprofile(wks_v,coldata_all[kstart:,...],p_all[kstart:,...],xbnds,ybnds,longname,units,times[t])
 
     
 
