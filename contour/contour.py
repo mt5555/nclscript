@@ -9,7 +9,7 @@ from __future__ import print_function
 import os, numpy
 import Ngl
 from netCDF4 import Dataset
-from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon
+from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon, mpl_streamlines
 from matplotlib import pyplot
 from vertprofile import ngl_vertprofile
 
@@ -30,15 +30,25 @@ outname=inname.split(".nc")[0] + "."+var1
 
 
 ################################################################
+# custom axis for vertical profiles
+################################################################
+ybnds=[]
+xbnds=[]
+if var1=="dtheta_dp":
+    ybnds=[-.4,.2]
+    ybnds=[-.01,.002]
+if var1=="dt_dp":
+    ybnds=[-.01,.002]
+if var1=="Th":
+    ybnds=[0,1000]
+    xbnds=[150,450]
+if var1=="div":
+    ybnds=[0,1000]
+    xbnds=[-.0008,.0004]
+
+################################################################
 # custom contour levels for certain varaiables
 ################################################################
-vrange=[]
-if var1=="dtheta_dp":
-    vrange=[-.4,.2]
-    vrange=[-.01,.002]
-if var1=="dt_dp":
-    vrange=[-.01,.002]
-
 if clev==None:
     clev=[40]   # 40 levels, no range specified
 
@@ -73,7 +83,7 @@ else:
 ################################################################
 # custom scalings for certain varaiables
 ################################################################
-if var1=="PRECT" or var1=="PRECC" or var1=="PRECL":     
+if var1=="PRECT" or var1=="PRECC" or var1=="PRECL" or var1=="PrecipTotalSurfMassFlux":     
     scale=1000.0*(24*3600)  # convert to mm/day
     units="mm/day"
 
@@ -106,6 +116,12 @@ if var1=="DZ3":
     compute_dz=True
     var1_read="DYN_Z3"
     longname="DYN_DZ"
+
+compute_windstress=False
+if var1=="surf_mom_flux":
+    print("Special processing:  windstress=surf_mom_flux^2") 
+    compute_windstress=True
+
 
 compute_prect=False
 if var1=="PRECT" and ~("PRECT" in infile.variables.keys()):
@@ -152,7 +168,7 @@ if var1=="POTT":
 
 
 compute_avedx=False
-if var1=="ave_dx":
+if var1=="ave_dx" or var1=="ave_dx_T":
     print("Special processing:  ave_dx=(min_dx+max_dx)/2") 
     compute_avedx=True
     var1_read="min_dx"
@@ -161,7 +177,18 @@ if var1=="ave_dx":
     units="km"
 
 
+compute_streamlines=False
+if var1=="stream_uv":
+    print("Special processing:  ave_dx=(min_dx+max_dx)/2") 
+    compute_streamlines=True
+    var1_read="u"
+    var2_read="v"
+    longname="velocity"
+    units="m/s"
+
+
     
+print("reading dataf name=",var1_read)    
 dataf  = infile.variables[var1_read]
 data2d_plot2=numpy.array([])
 if var2_read != None:
@@ -200,6 +227,11 @@ else:
     t1=timeindex     # user specified index
     t2=timeindex+1
 
+time_label=False
+if len(range(t1,t2)) > 1 :
+    time_label=True   # add t= label to plots
+    print("Adding t= label to plots")
+
 ################################################################
 # level varaibles
 ################################################################
@@ -207,7 +239,7 @@ nlev=0
 nlev_data=0
 if levdim:
     nlev=infile.dimensions["lev"].size
-    lev=infile.variables["lev"][:]
+    #lev=infile.variables["lev"][:]
     if "lev" in dataf.dimensions:
         nlev_data=nlev
     if "ilev" in dataf.dimensions:
@@ -215,6 +247,8 @@ if levdim:
 
     if klev==None:
         klev=int(3*nlev/4)
+
+if "hyam" in infile.variables.keys():
     hyam=infile.variables['hyam'][:]
     hybm=infile.variables['hybm'][:]
     hyai=infile.variables['hyai'][:]
@@ -226,9 +260,11 @@ if levdim:
 # get correct PS variable
 ################################################################
 ps=numpy.empty([ntimes,1])  # dummy array, wont be used, but needs to be indexed    
+have_ps=False
 if "ps" in infile.variables.keys():
     ps0=1000*100
     ps=infile.variables["ps"]
+    have_ps=True
 
 if "P0" in infile.variables.keys():
     ps0=infile.variables["P0"].getValue()
@@ -237,17 +273,23 @@ if "ncol_d" in dataf.dimensions:
     lat  = infile.variables["lat_d"][:]
     lon  = infile.variables["lon_d"][:]
     PSname="DYN_PS"
-    ps=infile.variables["DYN_PS"]
+    if "DYN_PS" in infile.variables.keys():
+        ps=infile.variables["DYN_PS"]
+        have_ps=True
 else:
     lat  = infile.variables["lat"][:]
     lon  = infile.variables["lon"][:]
     PSname="PS"
     if "PS" in infile.variables.keys():
         ps=infile.variables["PS"]
+        have_ps=True
+
 
 if plev != None:
+    if not have_ps:
+        print("Error: need PS to interpolate to plev=",plev)
+        sys.exit(2)
     print("Interpolating to pressure level = ",plev,"using",PSname)
-
 
 
     
@@ -274,7 +316,7 @@ if use_ngl:
             cmap='MPL_RdYlBu'
             #cmap="BlueYellowRed"
 
-    if var1=="ps" and len(clev)>2:
+    if var1=="ps" and len(clev)==3:
         # custom colormap with center at 1000mb
         cmap = Ngl.read_colormap_file("MPL_RdYlBu")
         n=cmap.shape
@@ -309,8 +351,17 @@ for t in range(t1,t2):
     # 2D maps
     #
     if (timedim and levdim):
-        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev)
-        data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm)
+        dimname=dataf.dimensions
+        if "lev" in dimname:
+            kidx=dimname.index("lev")
+        if "ilev" in dimname:
+            kidx=dimname.index("ilev")
+        print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
+        data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)
+        print("data2d shape=",data2d.shape)
+
+        if compute_streamlines:
+            data2d_2=extract_level(dataf2[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)            
 
         if compute_dtheta_dp or compute_dt_dp:
             data2dm1=extract_level(dataf[t,...],klev-1,plev,ps[t,...],hyam,hybm)
@@ -341,10 +392,17 @@ for t in range(t1,t2):
 
 
     elif (timedim):
+        print(t+1,"time=",times[t]," time & space dimensions only")
+        dimname=dataf.dimensions
+
         data2d=dataf[t,...]
         if compute_prect:
-            data3d=data2d + PRECC[t,...]
+            data2d=data2d + PRECC[t,...]
             longname="PRECT"
+        if compute_windstress:
+            temp=data2d[:,0]**2 + data2d[:,0]**2
+            data2d=temp
+            longname="wind stress"
         print(t,"time=",times[t])
     elif (levdim):
         print("k=",klev,"/",nlev_data,"plev=",plev)
@@ -354,7 +412,13 @@ for t in range(t1,t2):
         if compute_avedx:
             data2d_2=dataf2[:]
             data2d=numpy.sqrt(data2d*data2d_2)
-            data2d_plot2=ps[t,...]
+            if var1=="ave_dx_T":
+                dataf_T  = infile.variables["T"]
+                print("reading T to add to avedx plot",dataf_T.shape,ps.shape)
+                data2d_plot2 = extract_level(dataf_T[6,...],klev,[750.0],ps[6,...],hyam,hybm)
+            else:
+                # plot contour lines of ps on top of avedx:
+                data2d_plot2=ps[t,...]
 
     if scale:
         data2d=data2d*scale
@@ -383,6 +447,11 @@ for t in range(t1,t2):
     print("scaled data2d min=",data2dmin,"at",min_i1,"lon=",lonmin,'lat=',latmin)
     print("scaled data2d max=",data2dmax,"at",max_i1,"lon=",lonmax,'lat=',latmax)
 
+    if time_label:
+        title=longname
+        longname_t="t="+str(times[t])
+    else:
+        longname_t=longname
 
     # should we interpolate?
     if len(lon)*len(lat) != numpy.prod(data2d.shape) and nlatlon_interp:
@@ -400,32 +469,53 @@ for t in range(t1,t2):
             
         data_i=interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
         if use_ngl:
-            ngl_plot(wks,data_i,lon_i,lat_i,title,longname,units,
+            ngl_plot(wks,data_i,lon_i,lat_i,title,longname_t,units,
                      proj,clev,cmap,scrip_file,se_file)
         else:
-            print("calling mpl_plot")
-            mpl_plot(data_i,lon_i,lat_i,title,longname,units,
-                     proj,clev,cmap,scrip_file,gll_file)
+            if compute_streamlines:
+                data_i_2=interp_to_latlon(data2d_2,lat,lon,lat_i,lon_i)
+                mpl_streamlines(data_i,data_i_2,lon_i,lat_i,title,longname,units,
+                         proj,clev,cmap)
+            else:
+                print("calling mpl_plot")
+                mpl_plot(data_i,lon_i,lat_i,title,longname,units,
+                         proj,clev,cmap,scrip_file,gll_file)
             pyplot.savefig(outname,dpi=300,orientation="portrait")
+            pyplot.close()
     elif use_ngl:
-        ngl_plot(wks,data2d,lon,lat,title,longname,units,
+        ngl_plot(wks,data2d,lon,lat,title,longname_t,units,
                  proj,clev,cmap,scrip_file,se_file,data2d_plot2)
     else:
-        mpl_plot(data2d,lon,lat,title,longname,units,
+        if compute_streamlines:
+            mpl_streamlines(data2d,data2d_2,lon,lat,title,longname,units,
+                            proj,clev,cmap)
+        else:
+            mpl_plot(data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file,gll_file)
         #pyplot.show()
         pyplot.savefig(outname,dpi=300,orientation="portrait")
-
+        pyplot.close()
 
 
     #
     # 1D vertical profile at a specified point
     #
     # data2d[min_i1] will give value for either 1D or 2D data
-    if levdim and nlev_data>0:
+    min_i1=[183,115]
+    max_i1=[183,112]
+    latmin  = lat[min_i1[0]]
+    lonmin  = lon[min_i1[1]]
+    latmax  = lat[max_i1[0]]
+    lonmax  = lon[max_i1[1]]
+    print("vert profile1 at ",min_i1,"lon=",lonmin,'lat=',latmin)
+    print("vert profile2 at ",max_i1,"lon=",lonmax,'lat=',latmax)
+
+
+    if levdim and nlev_data>0 and have_ps and use_ngl:
         ncols=len((min_i1,max_i1))
-        if var1=="Th" or var1=="POTT":
-            ncols=ncols*3  # add ref profile
+        # add ref profile to plot?
+        #if var1=="Th" or var1=="POTT":
+        #    ncols=ncols*3
         coldata_all=numpy.zeros([nlev_data,ncols])
         p_all=numpy.zeros([nlev_data,ncols])
         icols=0
@@ -470,7 +560,8 @@ for t in range(t1,t2):
             else:
                 p_all[:,icols]=p_i
             icols=icols+1
-            if var1=="Th" or var1=="POTT":
+            if False and (var1=="Th" or var1=="POTT"):
+                print("Adding Th reference profiles")
                 exner=(p/ps0)**.2856  # kappa
                 coldata_all[:,icols]=97/exner + 191   # ECMWF
                 p_all[:,icols]=p
@@ -480,7 +571,7 @@ for t in range(t1,t2):
                 icols=icols+1
 
         kstart=int(nlev/3)
-        ngl_vertprofile(wks_v,coldata_all[kstart:,...],p_all[kstart:,...],vrange,longname,units)
+        ngl_vertprofile(wks_v,coldata_all[kstart:,...],p_all[kstart:,...],xbnds,ybnds,longname,units,times[t])
 
     
 

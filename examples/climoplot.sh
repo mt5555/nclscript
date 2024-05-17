@@ -40,7 +40,9 @@ if ( $1 =~ hs* ) then
    set name = `basename $1 .nc`
    set wdir = `pwd`
    set dirname = `basename $wdir`
-   ls $1
+   echo $name
+   echo $dirname
+   ls $name.nc
    if ( $status == 0 ) then
    foreach opt ( andes himalaya latlon )
       contour.py -i $name.nc -c -.15,.15 -r 300x600 -m $opt omega500

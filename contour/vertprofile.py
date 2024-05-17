@@ -3,16 +3,20 @@ import numpy, os, sys, getopt
 # needed for ngl_plot
 import Ngl
 
-def ngl_vertprofile(wks,coldata,lev,vrange,title,units):
+def ngl_vertprofile(wks,coldata,lev,xbnds,ybnds,title,units,time):
 
     res = Ngl.Resources()
-    res.tiMainString           = title   
+    res.tiMainString           = title+"~C~"+"time="+str(time)
     res.tiXAxisString          = units
     res.tiYAxisString          = "hPa"
 
-    if len(vrange)==2:
-        res.trXMinF=vrange[0]     
-        res.trXMaxF=vrange[1]
+    print("vert profile title=",title)
+    if len(xbnds)==2:
+        res.trXMinF=xbnds[0]     
+        res.trXMaxF=xbnds[1]
+    if len(ybnds)==2:
+        res.trYMinF=ybnds[0]     
+        res.trYMaxF=ybnds[1]
      
     res.trYReverse        = True      
 

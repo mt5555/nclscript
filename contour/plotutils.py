@@ -71,6 +71,7 @@ def myargs(argv):
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax       contour level min,max with 40 levels')
         print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
+        print (name,' -c cmin,cmax,cinc,logbase  log levels, min,max,inc (in log space),base (2 or 10)')
         print (name,' -m map projeciton  latlon,US1,oro,andes,hamalaya,etc...')
         print (name,' -r 180x360  remap to lat/lon uni grid')
         print (name,' -r 181x360  remap to lat/lon cap grid')
@@ -188,25 +189,41 @@ def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
     return data_i
     
 
-def extract_level(dataf,klev,plev,PS,hyam,hybm):
-    if plev == None:
-        data2d=dataf[klev,...]
-    else:
-        # vertical interpolation
-        v_interp = 2   # type of interpolation: 1 = linear, 2 = log, 3 = loglog
-        extrap = True  # is extrapolation desired if data is outside the range of PS
-        P0mb = 1000    # ps in Pa, but this argument must be in mb
+def extract_level(dataf,klev,plev,PS,hyam,hybm,kidx=0):
 
-        if len(dataf.shape)==2:   # lev,ncol
-            dataf2=numpy.expand_dims(dataf,axis=2)  # lev,ncol,1
-            PS2=numpy.expand_dims(PS,axis=1)        # ncol,1
-            data2d=numpy.squeeze(Ngl.vinth2p(dataf2,hyam,hybm,plev,PS2,v_interp,P0mb,1,extrap))
-        elif len(dataf.shape)==3:  # lev,lat,lon
-            data2d=numpy.squeeze(Ngl.vinth2p(dataf,hyam,hybm,plev,PS,v_interp,P0mb,1,extrap))
+    if kidx==0:  # intepolate first index:
+        if plev == None:
+            data2d=dataf[klev,...]
         else:
-            print("ERROR: extract_level: dataf() needs to be 2 or 3 dimensiosn")
+            print("Interpolating 1st dimension")
+            # vertical interpolation
+            v_interp = 2   # type of interpolation: 1 = linear, 2 = log, 3 = loglog
+            extrap = True  # is extrapolation desired if data is outside the range of PS
+            P0mb = 1000    # ps in Pa, but this argument must be in mb
+            
+            if len(dataf.shape)==2:   # lev,ncol
+                dataf2=numpy.expand_dims(dataf,axis=2)  # lev,ncol,1
+                PS2=numpy.expand_dims(PS,axis=1)        # ncol,1
+                data2d=numpy.squeeze(Ngl.vinth2p(dataf2,hyam,hybm,plev,PS2,v_interp,P0mb,1,extrap))
+            elif len(dataf.shape)==3:  # lev,lat,lon
+                data2d=numpy.squeeze(Ngl.vinth2p(dataf,hyam,hybm,plev,PS,v_interp,P0mb,1,extrap))
+            else:
+                print("ERROR: extract_level: dataf() needs to be 2 or 3 dimensiosn")
+                
+        return data2d
 
-    return data2d
+    if kidx==len(dataf.shape)-1:
+        print("need to interpolating last dimension!")
+        if plev == None:
+            data2d=dataf[...,klev]
+        else:
+            # vertical interpolation
+            print("vertical interpolation last dimension, not coded")
+            sys.exit(1)
+        return data2d
+
+    print("Error: level dimension was not first or last")
+    sys.exit(1)
 
 
 def ngl_plot(wks,data2d,lon,lat,title,longname,units,
@@ -246,12 +263,30 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.cnLevelSelectionMode  = "AutomaticLevels"
         res.cnMaxLevelCount = clev[0]
         nlevels=clev[0]
+    elif len(clev)==4:
+        # log spacing
+        cbase=clev[3]
+        c0=numpy.log(clev[0])/numpy.log(cbase)
+        c1=numpy.log(clev[1])/numpy.log(cbase)
+        cinc=clev[2]
+
+        #nlevels=(clev[1]-clev[0])/clev[2]
+        nlevels=(c1-c0)/cinc
+        clevs=[ c0+i*cinc  for i in range(1+round(nlevels))]
+        clevs=numpy.power(cbase,clevs)
+        print("nlevels=",nlevels," lev spacing ratio= ",cbase,"^",cinc)
+        print("log clevs=",clevs)
+
+        res.cnLevelSelectionMode = "ExplicitLevels" 
+        res.cnLevels=clevs
     else:
         res.cnLevelSelectionMode  = "ManualLevels"
         res.cnMinLevelValF=clev[0]
         res.cnMaxLevelValF=clev[1]
         res.cnLevelSpacingF=clev[2]
         nlevels=(clev[1]-clev[0])/clev[2]
+
+
 
 
 # defaults. some projection options might change:
@@ -308,6 +343,13 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 15.
         res.mpMinLonF = -100.
         res.mpMaxLonF =  -40.
+    elif projection == "pacific1":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = -20.
+        res.mpMaxLatF = 60.
+        res.mpMinLonF = -180.
+        res.mpMaxLonF =  -80.
     elif projection == "andes2":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -348,6 +390,13 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75.
         res.mpMinLonF = 45.
         res.mpMaxLonF = 175.
+    elif projection == "debug3":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        res.mpMinLatF = 10.
+        res.mpMaxLatF = 50.
+        res.mpMinLonF = 60.
+        res.mpMaxLonF = 100.
     elif projection == "baroclinic":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -368,6 +417,16 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLonF = 20.
         res.cnLinesOn             = True          # Turn off contour lines
         res.mpOutlineOn          = False
+    elif projection == "barotopo-nc2":
+        res.mpProjection = "CylindricalEquidistant"
+        res.mpLimitMode = "LatLon"
+        #res.mpCenterLonF         = -90.
+        res.mpMinLatF = 15. 
+        res.mpMaxLatF = 75. 
+        res.mpMinLonF = -150.
+        res.mpMaxLonF = 20.
+        res.mpOutlineOn          = False
+        res.cnLinesOn            = False
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -409,17 +468,17 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     
 
 
+    print("Title: ",title)
+    print("Longname: ",longname)
     
     res.tiMainString = title
-    print("Title: ",res.tiMainString)
-    print("Longname: ",longname)
 
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))        
     if res.cnLevelSelectionMode == "ManualLevels":
         print("contour levels: manual [",res.cnMinLevelValF,",",\
               res.cnMaxLevelValF,"] spacing=",res.cnLevelSpacingF)
         print("number of contour levels:",nlevels)
-    else:
+    elif res.cnLevelSelectionMode=="AutomaticLevels":
         print("contour levels: auto. number of levels:",res.cnMaxLevelCount)
 
 
@@ -449,15 +508,25 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res2.nglDraw  = False
         map1 = Ngl.map(wks,res2)
         map2 = Ngl.contour(wks,data2d,res2)
-        print("Adding contour line plot...")
+        print("Adding contour line plot from data2d_2...")
+        print("data2d_2 min/max=",numpy.amin(data2d_2),numpy.amax(data2d_2))
+
         res3=res
         res3.mpOutlineOn          = False
         res3.cnFillOn             = False         # Turn on contour fill.
         res3.cnLinesOn            = True          # Turn off contour lines
         #res3.cnLineColor          = "White"
-        res3.cnLevelSelectionMode  = "AutomaticLevels"
-        res3.cnMaxLevelCount = 5
-        res3.cnLevelSpacingF=1e5   # ignored, but set to prevent warnings
+
+        #res3.cnLevelSelectionMode  = "AutomaticLevels"
+        #res3.cnMaxLevelCount = 5
+        #res3.cnLevelSpacingF=1e5   # ignored, but set to prevent warnings
+
+        res3.cnMinLevelValF=200
+        res3.cnMaxLevelValF=300
+        res3.cnMaxLevelCount = 100
+        res3.cnLevelSpacingF=5  
+        res3.cnLineThicknessF = 1.5
+
         map3 = Ngl.contour(wks,data2d_2,res3)
         Ngl.overlay(map1,map2)
         Ngl.overlay(map1,map3)
@@ -471,8 +540,8 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
     #-- write variable long_name and units to the plot
     txres = Ngl.Resources()
     txres.txFontHeightF = 0.016
-    Ngl.text_ndc(wks,longname,0.14,0.82,txres)
-    Ngl.text_ndc(wks,units, 0.95,0.82,txres)
+    Ngl.text_ndc(wks,longname,0.20,0.95,txres)
+    Ngl.text_ndc(wks,units, 0.85,0.95,txres)
     del txres
 
     if se_num>0:
@@ -486,6 +555,14 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
             x1=se_lat[x-1]
             x2=x1[0:1]
             plat=numpy.concatenate( [x1,x2])
+
+            # se_coord[0:2,x-1] = for element corners in cartesian coordinate.
+            # compute diagonal distance:
+            #xcoord=se_coord[:,x-1]
+            #d1=numpy.sum((xcoord[:,0]-xcoord[:,2])**2)
+            #d2=numpy.sum((xcoord[:,1]-xcoord[:,3])**2)
+            #dist2 = ((numpy.sqrt(d1/2)+numpy.sqrt(d2/2))/2)* 6.4e3  # dist in km
+            #if (dist2> 80):    # NE30 elements are about 325km
             Ngl.polyline(wks,map1,plon,plat,gsres)
         del gsres
             
@@ -507,10 +584,18 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         vmin=None
         vmax=None
         nlevels=int(round(clev[0]))
-    else:
+    elif len(clev)==3:
         vmin=clev[0]
         vmax=clev[1]
         nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
+    #elif len(clev)==4:
+    #not all MPL plotting options support list of levels
+    else:
+        print("Error: mpl len(clev) <> 1,3")
+        sys.exit(1)
+
+            
+    print("num contour levels=",nlevels)
 
     # set_extent[lon_min,lon_max,lat_min,lat_mx]
     if proj=="latlon":
@@ -537,6 +622,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-40, 40, 20, 75],crs=dataproj)
+    elif proj == "debug3":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([60, 100, 10, 50],crs=dataproj)
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -670,4 +759,80 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
 
     # Plot GLL nodes for perspective
     #pl = ax.plot(lon, lat, 'k.', projection=dataproj, markersize=1)
+
+
+
+def mpl_streamlines(data2d,data2d_2,lon,lat,title,longname,units,proj,clev,cmap):
+    
+    # Setup the plot
+    figure = pyplot.figure() #(figsize=(15, 10))
+    dataproj=crs.PlateCarree()
+
+    # pcolor/tripcolor doesn't use nelvels or contour intervals
+    if len(clev)==1:
+        vmin=None
+        vmax=None
+        nlevels=int(round(clev[0]))
+    else:
+        vmin=clev[0]
+        vmax=clev[1]
+        nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
+    print("num contour levels=",nlevels)
+
+    # set_extent[lon_min,lon_max,lat_min,lat_mx]
+    if proj=="latlon":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
+    elif proj=="US1":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-180, 0, -30, 75],crs=dataproj)
+    elif proj=="andes":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-100, -40, -40, 15],crs=dataproj)
+    elif proj=="himalaya":
+        plotproj=crs.PlateCarree(central_longitude=90.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([50, 110, 0, 60],crs=dataproj)
+    elif proj=="oro":
+        plotproj=crs.Orthographic(central_longitude=-45.0, central_latitude=45.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
+    elif proj == "europe":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-40, 40, 20, 75],crs=dataproj)
+    elif proj == "debug3":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([60, 100, 10, 50],crs=dataproj)
+    else:
+        print("Bad projection argument: ",proj)
+        sys.exit(3)
+
+    # structured lat/lon or unstructured data?
+    struct=False
+    if len(lon)*len(lat) == numpy.prod(data2d.shape): struct=True
+    if not struct:
+        print("streamlines requires lat/lon data")
+        sys.exit(2)
+        
+    print("colormap min/max=",vmin,vmax)
+    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
+
+    
+    data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
+    data2d_2_ext, lon3 = add_cyclic_point(data2d_2, coord=lon,axis=1)
+    magnitude = numpy.sqrt(data2d_ext**2 + data2d_2_ext**2)
+    pl=ax.streamplot(lon2, lat, data2d_ext, data2d_2_ext, transform=dataproj,  linewidth=2, density=2, color=magnitude)
+
+    if units=="":
+        cb = pyplot.colorbar(pl.lines, orientation='horizontal', 
+                             label='%s'%(longname),shrink=0.75, pad=0.1)
+    else:
+        cb = pyplot.colorbar(pl.lines, orientation='horizontal', 
+                             label='%s (%s)'%(longname, units),shrink=0.75, pad=0.1)
+
 

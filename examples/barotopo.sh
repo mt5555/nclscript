@@ -16,7 +16,13 @@ cd ~/scratch1/preqx/dcmip_tests/dcmip2016_test1_baroclinic_wave/theta-l
 #contour.py  -c 940,1020,10  -m latlon-nc2 -t 7 -i movies/r100-topo_dcmip2016_test11.nc \
 #-e /lcrc/group/acme/data/inputdata/atm/cam/inic/homme/northamericax4v1.g ps
 
-#/lcrc/group/acme/data/inputdata/atm/cam/inic/homme/northamericax4v1.gcontour.py -c 20,140,1 -m latlon-nc2  -i movies/rrm-topo_dcmip2016_test11.nc ave_dx
+#/lcrc/group/acme/data/inputdata/atm/cam/inic/homme/northamericax4v1.g
+#contour.py -c 20,140,1 -m latlon-nc2  -i movies/rrm-topo_dcmip2016_test11.nc ave_dx
+#contour.py -c 20,140,1 -m barotopo-nc2  -i movies/rrm-topo_dcmip2016_test11.nc ave_dx
+contour.py -c 20,140,1 -m barotopo-nc2  -i movies/rrm-topo_dcmip2016_test11.nc ave_dx_T
+contour.py -c 20,140,1 -m barotopo-nc2  -i movies/r25-topo_dcmip2016_test11.nc ave_dx_T
+contour.py -c 20,140,1 -m barotopo-nc2  -i movies/r100-topo_dcmip2016_test11.nc ave_dx_T
+
 #contour.py  -c 940,1020,10  -m barotopo -t 7 -i movies/r25-topo_dcmip2016_test11.nc \
 #-e /lcrc/group/acme/data/inputdata/atm/cam/inic/homme/northamericax4v1.g   \
 #ps 
@@ -29,10 +35,20 @@ cd ~/scratch1/preqx/dcmip_tests/dcmip2016_test1_baroclinic_wave/theta-l
 #contour.py -c $carg  -m barotopo -p 750 -t 7 -i movies/rrm-topo_dcmip2016_test11.nc zeta
 
 set carg = "230,290,5"
-set pval = 700
-contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/r100-topo_dcmip2016_test11.nc T
-contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/r25-topo_dcmip2016_test11.nc T
-contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/rrm-topo_dcmip2016_test11.nc T
+set pval = 750
+#contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/r100-topo_dcmip2016_test11.nc T
+#contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/r25-topo_dcmip2016_test11.nc  T
+#contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/rrm-topo_dcmip2016_test11.nc  T
+
+#contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/r100-topo_dcmip2016_test11.nc \
+#-e ~/scratch1/mapping/TEMPEST_NE30.g    T
+
+#contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/r25-topo_dcmip2016_test11.nc  T
+#-e /lcrc/group/acme/data/inputdata/atm/cam/inic/homme/northamericax4v1.g    T
+
+#contour.py  -c $carg -m barotopo -p $pval -t 7 -i movies/rrm-topo_dcmip2016_test11.nc  \
+#-e /lcrc/group/acme/data/inputdata/atm/cam/inic/homme/northamericax4v1.g    T
+
 
 #set carg = "230,265,5"
 #set pval = 500
