@@ -46,7 +46,6 @@ from matplotlib import pyplot
 from matplotlib.collections import PolyCollection
 
 import holoviews as hv
-import hv_visualization as hv_vis
 from holoviews.operation.datashader import rasterize as hds_rasterize
 import bokeh
 
