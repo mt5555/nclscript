@@ -662,8 +662,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         infile = Dataset(scrip_file,"r")
         clat  = infile.variables["grid_corner_lat"][:,:]
         clon  = infile.variables["grid_corner_lon"][:,:]
-        # if in Radians or radians, convert to degrees
-        if "adian" in infile.variables["grid_corner_lat"].units:
+        # if in Radians, convert to degrees
+        if "radian" in infile.variables["grid_corner_lat"].units.lower():
             clon=clon*180/numpy.pi
             clat=clat*180/numpy.pi
         if clon.shape[0] == len(lat):
