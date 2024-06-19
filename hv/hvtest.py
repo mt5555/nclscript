@@ -141,11 +141,11 @@ def polygons_to_geodataframe(lon_poly_coords, lat_poly_coords, data, eps=10):
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
-#name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
-name="/Users/mt/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
+#name="/Users/mt/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
 
 
 file1 = Dataset(name,"r")
@@ -156,7 +156,7 @@ print("ncols = ",ncols)
 xlat = file1.variables["grid_corner_lat"][:,:]
 xlon = file1.variables["grid_corner_lon"][:,:]
 area = file1.variables["grid_area"][:]
-if "adian" in file1.variables["grid_corner_lat"].units:
+if "radian" in file1.variables["grid_corner_lat"].units.lower():
     xlat *= 180/np.pi
     xlon *= 180/np.pi
 
@@ -242,9 +242,10 @@ gdf = polygons_to_geodataframe(np.ma.getdata(xlon),np.ma.getdata(xlat), np.ma.ge
 plot2 = gdf.hvplot.polygons(cmap=colormap,clim=clev,
               color='faces',
            width=width, height=height, xlim=xlim, ylim=ylim, 
-           edgecolor='face',alpha=1,
+           edgecolor='none',alpha=1,
                             xaxis=None, yaxis=None,
              data_aspect=1, colorbar=False, rasterize=True)
+# hv seems to work with none, dont need  edgecolor='face'?
 
 fig = hv.render(plot2)
 fig.savefig("hvplot-mpl.png",  bbox_inches='tight')
@@ -275,7 +276,8 @@ ax.set_global()
 fig=matplotlib.pyplot.figure()
 ax = matplotlib.pyplot.axes(projection=proj)
 ax.set_global()
-p = matplotlib.collections.PolyCollection(corners, array=area, edgecolor='none',alpha=1)
+p = matplotlib.collections.PolyCollection(corners, array=area, edgecolor='face',alpha=1)
+#p = matplotlib.collections.PolyCollection(corners, array=area, edgecolor='none',linewidth=0,alpha=1)
 p.set_clim(clev)
 p.set_cmap(colormap)
 ax.add_collection(p)
@@ -352,7 +354,7 @@ hv_polys = hv.Polygons(gdf, vdims=['faces'])
 hv_polys.opts(color='faces')
 hv_polys.opts(cmap=colormap)
 hv_polys.opts(data_aspect=1)
-hv_polys.opts(edgecolor='face')     # should these be none???
+hv_polys.opts(edgecolor='none')    
 hv_polys.opts(alpha=1)
 hv_polys.opts(xlim=(-180.,180))
 hv_polys.opts(ylim=(-90.,90))
