@@ -138,10 +138,10 @@ def polygons_to_geodataframe(lon_poly_coords, lat_poly_coords, data, eps=10):
 
 
 # read in polygons from scrip file:
-#name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
-name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+#name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
@@ -276,8 +276,11 @@ ax.set_global()
 fig=matplotlib.pyplot.figure()
 ax = matplotlib.pyplot.axes(projection=proj)
 ax.set_global()
-p = matplotlib.collections.PolyCollection(corners, array=area, edgecolor='face',alpha=1)
-#p = matplotlib.collections.PolyCollection(corners, array=area, edgecolor='none',linewidth=0,alpha=1)
+
+# antialized=False to remove white lines between cells.
+p = matplotlib.collections.PolyCollection(corners, array=area,
+    edgecolor='none',alpha=1,antialiased=False)
+
 p.set_clim(clev)
 p.set_cmap(colormap)
 ax.add_collection(p)
@@ -285,10 +288,6 @@ ax.add_collection(p)
 matplotlib.pyplot.savefig('mpl-pc.png',dpi=dpi,orientation="portrait",bbox_inches='tight')
 end= time.time()
 print(f"{end-start:.2f}s")
-
-
-
-
 
 ################################################################################
 #
