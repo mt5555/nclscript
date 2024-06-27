@@ -5,6 +5,8 @@ import sys
 from netCDF4 import Dataset
 
 from plotpoly_mpl import plotpoly
+from plotpoly_hv import plotpoly as plotpoly_hv
+import cartopy.crs as ccrs
 
 # read in polygons from scrip file:
 name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
@@ -32,7 +34,13 @@ alpha=np.ones_like(res)
 alpha[res>150]=.5
 alpha[res>160]=0
 
+#proj=ccrs.PlateCarree()
+proj=ccrs.Robinson()
+#clat=40; clon=-60;  proj = ccrs.Orthographic(central_latitude=clat, central_longitude=clon) 
+#print(proj.srs)
 
-plotpoly(xlat,xlon,res,"res.png",title="resolution (km)",alpha=alpha)
+
+#plotpoly(xlat,xlon,res,"res.png",title="resolution (km)",alpha=alpha)
+plotpoly_hv(xlat,xlon,res,"res.png",title="resolution (km)",proj=proj,alpha=alpha)
 
 

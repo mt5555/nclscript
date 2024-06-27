@@ -40,10 +40,6 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     #print("matplotlib/polycollection... ",end='')
     start= time.time()
 
-    #proj=ccrs.Robinson()
-    #clat=40; clon=-60;  proj = ccrs.Orthographic(central_latitude=clat, central_longitude=clon) 
-    #print(proj.srs)
-
     dpi=1200
     
     # if mask present, remove masked cells
@@ -76,20 +72,23 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         [xpoly,xpoly_new,mask_new] = shift_anti_meridian_polygons(xpoly)
         corners=np.concatenate((xpoly[:,:,0:2],xpoly_new[:,:,0:2]),axis=0)
         data=np.concatenate((data,data[mask_new]),axis=0)
-        alpha=np.concatenate((alpha,alpha[mask_new]),axis=0)
+        if not np.isscalar(alpha):
+            alpha=np.concatenate((alpha,alpha[mask_new]),axis=0)
     if "proj=robin" in proj.srs:
         # remove all cut polygons
         eps=40*1e5
         mask_keep = np.array(np.max(xpoly[:,:,0], axis=1) - np.min(xpoly[:,:,0], axis=1) < eps)
         corners=xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
-        alpha=alpha[mask_keep]
+        if not np.isscalar(alpha):
+            alpha=alpha[mask_keep]
     if "proj=ortho" in proj.srs:
         #remove non-visible points:
         mask_keep =  np.all(np.isfinite(xpoly),axis=(1,2))
         corners = xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
-        alpha=alpha[mask_keep]
+        if not np.isscalar(alpha):
+            alpha=alpha[mask_keep]
     
     fig=matplotlib.pyplot.figure()
     ax = matplotlib.pyplot.axes(projection=proj)
