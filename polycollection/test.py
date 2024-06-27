@@ -9,7 +9,8 @@ from plotpoly_hv import plotpoly as plotpoly_hv
 import cartopy.crs as ccrs
 
 # read in polygons from scrip file:
-name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+#name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+name="/Users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"

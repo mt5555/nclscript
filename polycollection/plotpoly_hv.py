@@ -8,7 +8,7 @@ import cartopy.crs as ccrs
 
 import geoviews as gv
 import geoviews.feature as gf
-from holoviews.operation.datashader import rasterize as hds_rasterize
+from holoviews.operation.datashader import datashade,rasterize 
 import time
 
 def shift_anti_meridian_polygons(polygons, eps=40):
@@ -110,8 +110,6 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
         else: colormap='plasma'
 
 
-    background = gv.Overlay([gf.coastline,gf.ocean,gf.land])
-    
     # transform into desired coordinate system:
     xpoly  = proj.transform_points(ccrs.PlateCarree(), lon_poly_coords, lat_poly_coords)
     #xpoly  = gv.operation.project(projection=proj, corners)
@@ -143,7 +141,7 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     gdf = polygons_to_geodataframe(np.ma.getdata(corners[:,:,:]), np.ma.getdata(data[:]))
     #gdf = gdf.assign(alpha = alpha)
     gdf = gdf.assign(alpha = 0.5)
-    print(gdf['alpha'])
+    #print(gdf['alpha'])
 
     cbar_opts={}
     #cbar_opts={'width': round(.02*width)}
@@ -152,27 +150,28 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     gv.extension('matplotlib') # need to load extension before setting options
     print("polygons...")
     hv_polys = gv.Polygons(gdf, vdims=['faces','alpha'],crs=proj).opts(color='faces')
-    #hv_polys.opts(alpha=.5)
-    hv_polys.opts(alpha='alpha')
-
-    print("rasterize...")    
-    rasterized = hds_rasterize(hv_polys,height=height, width=width)
-    rasterized.opts(xlabel='', ylabel='', clabel='')
-    rasterized.opts(cmap=colormap,colorbar=True,colorbar_opts=cbar_opts)
-    rasterized.opts(clim=clim)
-    #rasterized.opts(alpha=.5)    # this works
-    #rasterized.opts(alpha=gdf['alpha']) # shape doesn't match - rasterized in 1800x4000
-    rasterized.opts(fontscale=10)
-    rasterized.opts(title=title)
-
-    r = background * rasterized
+    hv_polys.opts(projection=proj, global_extent=True)
     #r.opts(xlim=(-180.,180))
     #r.opts(ylim=(-90.,90))
-    r.opts(data_aspect=1)
-    r.opts(projection=proj, global_extent=True)
-    r.opts(fig_inches=width/72)
 
-    r = background * hv_polys
+    print("rasterize...")
+    rasterized = rasterize(hv_polys,height=height, width=width)
+    rasterized.opts(cmap=colormap,colorbar=True,colorbar_opts=cbar_opts)
+    rasterized.opts(clim=clim)
+    rasterized.opts(fontscale=10)
+    rasterized.opts(title=title)
+    rasterized.opts(xlabel='', ylabel='', clabel='')
+    #rasterized.opts(cmap=["#EEEEEE"], alpha=0.5)
+    ##rasterized.opts(alpha=.5)    # this works
+    #rasterized.opts(alpha=gdf['alpha']) # shape doesn't match - rasterized in 1800x4000
+
+    
+    #background = gv.Overlay([gf.coastline,gf.ocean,gf.land])
+    #r = background * rasterized
+    r = gf.ocean * gf.land * rasterized
+    r.opts(fig_inches=width/72)   
+    r.opts(data_aspect=1)
+    
     print("render...")    
     fig=gv.render(r)
     if (filepath!=None):
