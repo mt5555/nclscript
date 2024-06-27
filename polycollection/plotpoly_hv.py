@@ -139,9 +139,6 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
             alpha=alpha[mask_keep]
 
     gdf = polygons_to_geodataframe(np.ma.getdata(corners[:,:,:]), np.ma.getdata(data[:]))
-    #gdf = gdf.assign(alpha = alpha)
-    gdf = gdf.assign(alpha = 0.5)
-    #print(gdf['alpha'])
 
     cbar_opts={}
     #cbar_opts={'width': round(.02*width)}
@@ -149,10 +146,11 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
 
     gv.extension('matplotlib') # need to load extension before setting options
     print("polygons...")
-    hv_polys = gv.Polygons(gdf, vdims=['faces','alpha'],crs=proj).opts(color='faces')
+    hv_polys = gv.Polygons(gdf, vdims=['faces'],crs=proj).opts(color='faces')
     hv_polys.opts(projection=proj, global_extent=True)
     #r.opts(xlim=(-180.,180))
     #r.opts(ylim=(-90.,90))
+
 
     print("rasterize...")
     rasterized = rasterize(hv_polys,height=height, width=width)
@@ -161,9 +159,6 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     rasterized.opts(fontscale=10)
     rasterized.opts(title=title)
     rasterized.opts(xlabel='', ylabel='', clabel='')
-    #rasterized.opts(cmap=["#EEEEEE"], alpha=0.5)
-    ##rasterized.opts(alpha=.5)    # this works
-    #rasterized.opts(alpha=gdf['alpha']) # shape doesn't match - rasterized in 1800x4000
 
     
     #background = gv.Overlay([gf.coastline,gf.ocean,gf.land])
@@ -171,7 +166,8 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     r = gf.ocean * gf.land * rasterized
     r.opts(fig_inches=width/72)   
     r.opts(data_aspect=1)
-    
+    #r.opts(fig_size=100)  # scaling factor
+        
     print("render...")    
     fig=gv.render(r)
     if (filepath!=None):

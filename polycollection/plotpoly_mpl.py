@@ -62,7 +62,8 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     if colormap==None:
         if mn*mx < 0: colormap='Spectral'
         else: colormap='plasma'
-    
+
+        
     # transform into desired coordinate system:
     xpoly  = proj.transform_points(ccrs.PlateCarree(), xlon, xlat)
 
@@ -93,7 +94,8 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     fig=matplotlib.pyplot.figure()
     ax = matplotlib.pyplot.axes(projection=proj)
     ax.set_global()
-    
+    ax.add_feature(cartopy.feature.OCEAN, zorder=0)
+        
     if not np.isscalar(alpha):    
         #ax.coastlines(resolution='110m')
         ax.add_feature(cartopy.feature.OCEAN, zorder=0)
@@ -107,18 +109,11 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     p = matplotlib.collections.PolyCollection(corners, array=data,
          edgecolor='none',linewidths=0,antialiased=False)
 
-
     p.set_clim(clim)
     p.set_cmap(colormap)
-    p.set_alpha(alpha)
+    if not np.isscalar(alpha):
+        p.set_alpha(alpha)
     ax.add_collection(p)
-    ec=p.get_edgecolors()
-    fc=p.get_facecolors()
-    ec[:,3]=0.5
-    print(ec.shape)
-    print(ec)
-    #p.set_edgecolors(ec)
-
 
     
     fig.colorbar(p)
