@@ -26,7 +26,13 @@ xlat = file1.variables["grid_corner_lat"][:,:]
 xlon = file1.variables["grid_corner_lon"][:,:]
 area = file1.variables["grid_area"][:]
 Rearth_km = 6378.1                # radius of earth, in km
+res=Rearth_km*np.sqrt(area)
 
-plotpoly(xlat,xlon,Rearth_km*np.sqrt(area),"res.png",title="resolution (km)")
+alpha=np.ones_like(res)
+alpha[res>150]=.5
+alpha[res>160]=0
+
+
+plotpoly(xlat,xlon,res,"res.png",title="resolution (km)",alpha=alpha)
 
 

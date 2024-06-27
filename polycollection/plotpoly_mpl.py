@@ -34,7 +34,7 @@ def shift_anti_meridian_polygons(polygons, eps=40):
 def plotpoly(xlat,xlon,data,outname=None, title='',
               proj=ccrs.PlateCarree(),
               xlim=(-180.,180), ylim=(-90.,90.),
-              clim=None,colormap=None,mask=1
+              clim=None,colormap=None,mask=1,alpha=1
 ):
 
     #print("matplotlib/polycollection... ",end='')
@@ -76,38 +76,52 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         [xpoly,xpoly_new,mask_new] = shift_anti_meridian_polygons(xpoly)
         corners=np.concatenate((xpoly[:,:,0:2],xpoly_new[:,:,0:2]),axis=0)
         data=np.concatenate((data,data[mask_new]),axis=0)
+        alpha=np.concatenate((alpha,alpha[mask_new]),axis=0)
     if "proj=robin" in proj.srs:
         # remove all cut polygons
         eps=40*1e5
         mask_keep = np.array(np.max(xpoly[:,:,0], axis=1) - np.min(xpoly[:,:,0], axis=1) < eps)
         corners=xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
+        alpha=alpha[mask_keep]
     if "proj=ortho" in proj.srs:
         #remove non-visible points:
         mask_keep =  np.all(np.isfinite(xpoly),axis=(1,2))
         corners = xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
+        alpha=alpha[mask_keep]
     
     fig=matplotlib.pyplot.figure()
     ax = matplotlib.pyplot.axes(projection=proj)
     ax.set_global()
     
-    #ax.coastlines(resolution='110m')
-    ax.add_feature(cartopy.feature.OCEAN, zorder=0)
-    #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
-    ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='none')
+    if not np.isscalar(alpha):    
+        #ax.coastlines(resolution='110m')
+        ax.add_feature(cartopy.feature.OCEAN, zorder=0)
+        #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
+        ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='none')
+
+#    p = matplotlib.collections.PolyCollection(corners, array=data,
+#         edgecolor='face',linewidths=0,antialiased=False)
+#    p = matplotlib.collections.PolyCollection(corners, array=data,
+#         edgecolor='face',antialiased=False)
+    p = matplotlib.collections.PolyCollection(corners, array=data,
+         edgecolor='none',linewidths=0,antialiased=False)
 
 
-    
-    p = matplotlib.collections.PolyCollection(corners, array=data, edgecolor='none',antialiased=False)
     p.set_clim(clim)
     p.set_cmap(colormap)
-    alpha=np.ones_like(data)
-    mask=(data > 150)
-    alpha[mask]=0
-    
     p.set_alpha(alpha)
     ax.add_collection(p)
+    ec=p.get_edgecolors()
+    fc=p.get_facecolors()
+    ec[:,3]=0.5
+    print(ec.shape)
+    print(ec)
+    #p.set_edgecolors(ec)
+
+
+    
     fig.colorbar(p)
     
     ax.set_title(title)
