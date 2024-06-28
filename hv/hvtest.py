@@ -340,14 +340,12 @@ start= time.time()
 
 # adjust cells into polycollection format:
 xpoly = shift_anti_meridian_polygons(xpoly[:,:,0],xpoly[:,:,1])
-corners=np.stack([xpoly[:,:,0],xpoly[:,:,1]],axis=2)
-
 
 ax = pyplot.axes(projection=ccrs.PlateCarree())
 ax.set_global()
 
 # antialized=False to remove white lines between cells.
-p = matplotlib.collections.PolyCollection(corners, array=area,
+p = matplotlib.collections.PolyCollection(xpoly, array=area,
     edgecolor='none',alpha=1,antialiased=False)
 
 p.set_clim(clev)
@@ -399,7 +397,7 @@ end=time.time()
 print(f"{end-start:.2f}s")
 
 
-os.exit(0)
+sys.exit(0)
 #
 #the approaches below take 10x longer than the above
 #probably related to when the polygons are rasterized
