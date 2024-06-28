@@ -2,12 +2,20 @@
 # hvscrip.py   test polygon plotting approaches from holovis, hvplot 
 #              and matplotlib
 #
-#  Writing a PNG of size ~ 1600x800:
-#  plotting the oRRS18to6 polygons (shaded by area):  1600x800      6400x3200
-#     matplotlib's polycollection:                   23s              46s
-#     hvplot (matplotlib backend):                    8.03s           11s
-#     holoviews (matplotlib extension)                9.98s           14s
-#     holoviews (bokeh extension/firefox renderer):  16.39s           25s
+#  updated 2024/6  matplotlib polycollection using dealiased=False,
+#  which makes matplotlib much faster and removes the lines between
+#  polygons
+#
+#  Writing a PNG of size ~ 6400x3200
+#  plotting the oRRS18to6 polygons (shaded by area): 
+#     holoviews (matplotlib extension)                   26.39s
+#     hvplot (matplotlib backend):                       21.38
+#     matplotlib's polycollection:                       24.21
+#     holoviews (bokeh extension/firefox renderer):      38.37
+#     matplotlib/interp to latlon/pcolor                239s
+#     holoviews/matplotlib/hv.save (no rasterizations) 2852s
+#     holoviews/bokeh/html                             1799s
+#
 #  plotting ne1024pg2 polygons (Needs ~55GB of memory)
 #     matplotlib's polycollection:                    322s
 #     hvplot (matplotlib backend):                     87s
@@ -216,10 +224,10 @@ def polygons_to_geodataframe(lon_poly_coords, lat_poly_coords, data, eps=10):
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
-#name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
+name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
 #name="/Users/mt/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
-name="/Users/mataylo/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
+#name="/Users/mataylo/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
 
 
 file1 = Dataset(name,"r")
@@ -399,7 +407,8 @@ end=time.time()
 print(f"{end-start:.2f}s")
 
 
-os.exit(0)
+
+#sys.exit(0)
 #
 #the approaches below take 10x longer than the above
 #probably related to when the polygons are rasterized
