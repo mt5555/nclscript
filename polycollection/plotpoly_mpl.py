@@ -1,10 +1,8 @@
-
 #
-# simpile routine to plot a function using matplotlib's polycollection
+# Matplotlib polycolleciton interface
+# plot data on SCRIP polygons, with cartopy
 #
- 
-
-import time
+#
 import numpy as np
 from netCDF4 import Dataset
 import cartopy 
@@ -32,15 +30,10 @@ def shift_anti_meridian_polygons(polygons, eps=40):
 
 
 def plotpoly(xlat,xlon,data,outname=None, title='',
-              proj=ccrs.PlateCarree(),
+              proj=ccrs.PlateCarree(), dpi=1200,
               xlim=(-180.,180), ylim=(-90.,90.),
               clim=None,colormap=None,mask=1,alpha=1
 ):
-
-    #print("matplotlib/polycollection... ",end='')
-    start= time.time()
-
-    dpi=1200
     
     # if mask present, remove masked cells
     if not np.isscalar(mask):
@@ -56,7 +49,7 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         
     mn=float(min(data))
     mx=float(max(data))
-    print(f"poly_plot(): plotting {len(data)} cells. data min/max= {mn:.3},{mx:.3}")
+    print(f"plotpoly(): {len(data)} cells. data min/max= {mn:.3},{mx:.3} {title}")
     if clim == None:
         clim=(mn,mx)
     if colormap==None:
@@ -121,6 +114,4 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     ax.set_title(title)
     if outname != None:
         matplotlib.pyplot.savefig(outname,dpi=dpi,orientation="portrait",bbox_inches='tight')
-    end= time.time()
-    #print(f"{end-start:.2f}s")
     return 0

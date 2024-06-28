@@ -77,7 +77,7 @@ def polygons_to_geodataframe(polygons, data, eps=10):
 
 
 def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
-              plot_bbox=None, width=4000, height=1800, proj=ccrs.PlateCarree(),
+              proj=ccrs.PlateCarree(),width=4000, height=1800, 
               xlim=(-180.,180), ylim=(-90.,90.),
               clim=None,colormap=None,mask=1,alpha=1
 ):
@@ -102,7 +102,7 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
         
     mn=float(min(data))
     mx=float(max(data))
-    print(f"plotpoly(): plotting {len(data)} cells. data min/max= {mn:.3},{mx:.3} {title}")
+    print(f"plotpoly(): {len(data)} cells. data min/max= {mn:.3},{mx:.3} {title}")
     if clim == None:
         clim=(mn,mx)
     if colormap==None:
@@ -145,14 +145,12 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     #cbar_opts={'label': "km"}
 
     gv.extension('matplotlib') # need to load extension before setting options
-    print("polygons...")
     hv_polys = gv.Polygons(gdf, vdims=['faces'],crs=proj).opts(color='faces')
     hv_polys.opts(projection=proj, global_extent=True)
     #r.opts(xlim=(-180.,180))
     #r.opts(ylim=(-90.,90))
 
 
-    print("rasterize...")
     rasterized = rasterize(hv_polys,height=height, width=width)
     rasterized.opts(cmap=colormap,colorbar=True,colorbar_opts=cbar_opts)
     rasterized.opts(clim=clim)
@@ -168,7 +166,6 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     r.opts(data_aspect=1)
     #r.opts(fig_size=100)  # scaling factor
         
-    print("render...")    
     fig=gv.render(r)
     if (filepath!=None):
         fig.savefig(filepath, bbox_inches='tight')

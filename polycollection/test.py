@@ -12,7 +12,8 @@ import cartopy.crs as ccrs
 
 # read in polygons from scrip file:
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
-name="/Users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+#name="/Users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne120pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
@@ -34,9 +35,9 @@ res=Rearth_km*np.sqrt(area)
 
 
 #proj=ccrs.PlateCarree()
-proj=ccrs.Robinson()
-#clat=40; clon=-60;  proj = ccrs.Orthographic(central_latitude=clat, central_longitude=clon) 
-#print(proj.srs)
+#proj=ccrs.Robinson()
+clat=40; clon=-60;  proj = ccrs.Orthographic(central_latitude=clat, central_longitude=clon) 
+print(proj.srs)
 
 # adding alpha array with data:
 #  matplotlib:  works, but doesn't apply to cell edges
@@ -57,8 +58,11 @@ my_cmap[round(cmap.N/4):round(cmap.N/2),-1]=0.5
 my_cmap = matplotlib.colors.ListedColormap(my_cmap)
 colormap=my_cmap
 
-
-#plotpoly(xlat,xlon,res,"res.png",title="resolution (km)",colormap=colormap)
-plotpoly_hv(xlat,xlon,res,"res.png",title="resolution (km)",proj=proj,colormap=colormap)
-
+t1= time.time()
+plotpoly(xlat,xlon,res,"resmpl.png",title="resolution (km)",proj=proj,colormap=colormap)
+t2= time.time()
+print(f"mpl polycollection: {t2-t1:.2f}s")
+plotpoly_hv(xlat,xlon,res,"reshv.png",title="resolution (km)",proj=proj,colormap=colormap)
+t3= time.time()
+print(f"hv polycollection:  {t3-t2:.2f}s")
 
