@@ -1,4 +1,3 @@
-import numpy as np
 #
 # hvscrip.py   test polygon plotting approaches from holovis, hvplot 
 #              and matplotlib
@@ -29,9 +28,6 @@ import numpy as np
 #   approach.
 #
     
-
-
-
 from netCDF4 import Dataset
 import time
 
@@ -41,9 +37,11 @@ import sys
 import spatialpandas
 import cartopy.crs as ccrs
 
+import numpy as np
 import matplotlib
 from matplotlib import pyplot
 from matplotlib.collections import PolyCollection
+from scipy.interpolate import griddata
 
 import holoviews as hv
 from holoviews.operation.datashader import rasterize as hds_rasterize
@@ -54,6 +52,80 @@ from selenium.webdriver.firefox.options import Options as FirefoxOptions
 import traceback
 
 import hvplot.pandas
+
+
+
+def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
+    # interpolating in lat/lon space has issues. interpolate in
+    # stereographic projection:
+    #
+    # input:
+    #    unstructured 1D data:  data(ncol),lat(ncol),lon(ncol)
+    #    target lat/lon grid:   lon_i(nlon), lat_i(nlat)
+    #
+    # output 2D interpolated data::
+    #   data(nlon,nlat)
+    #
+    
+    dproj=ccrs.PlateCarree()
+    halo = 15 # degrees        take hemisphere + halo for source grid
+
+    if  lat_i[0]<0 and lat_i[-1]>0:
+        # split grid into NH and SH
+        # mesh grid
+        nhalf = int(len(lat_i)/2)
+        lat_south = lat_i[ :nhalf]
+        lat_north = lat_i[ nhalf:]
+        
+        # take source data in the correct hemisphere, include extra halo points for interpolation
+        # using the full global data sometimes confuses griddata with points being mapped close to infinity
+        data2d_h=data2d[lat<halo]
+        
+        lon_h=lon[lat<halo]
+        lat_h=lat[lat<halo]
+        xv,yv=np.meshgrid(lon_i,lat_south)
+        coords_in  = ccrs.SouthPolarStereo().transform_points(dproj,lon_h,lat_h)
+        coords_out = ccrs.SouthPolarStereo().transform_points(dproj,xv.flatten(),yv.flatten())
+        data_s = griddata(coords_in[:,0:2], data2d_h, coords_out[:,0:2], method='linear')
+        
+        data2d_h=data2d[lat>-halo]
+        lon_h=lon[lat>-halo]
+        lat_h=lat[lat>-halo]
+        xv,yv=np.meshgrid(lon_i,lat_north)
+        coords_in  = ccrs.NorthPolarStereo().transform_points(dproj,lon_h,lat_h)
+        coords_out = ccrs.NorthPolarStereo().transform_points(dproj,xv.flatten(),yv.flatten())
+        data_n = griddata(coords_in[:,0:2], data2d_h, coords_out[:,0:2], method='linear')
+        
+        data_i=np.concatenate((data_s,data_n)).reshape(len(lat_i),len(lon_i))
+
+    elif lat_i[-1]<0:
+        # SH only
+        data2d_h=data2d[lat<halo]
+        lon_h=lon[lat<halo]
+        lat_h=lat[lat<halo]
+        
+        xv,yv=np.meshgrid(lon_i,lat_i)
+        coords_in  = ccrs.SouthPolarStereo().transform_points(dproj,lon_h,lat_h)
+        coords_out = ccrs.SouthPolarStereo().transform_points(dproj,xv.flatten(),yv.flatten())
+        data_i = griddata(coords_in[:,0:2], data2d_h, coords_out[:,0:2], method='linear')
+
+    elif lat_i[0]>0:
+        # NH only
+        data2d_h=data2d[lat>-halo]
+        lon_h=lon[lat>-halo]
+        lat_h=lat[lat>-halo]
+        
+        xv,yv=np.meshgrid(lon_i,lat_i)
+        coords_in  = ccrs.NorthPolarStereo().transform_points(dproj,lon_h,lat_h)
+        coords_out = ccrs.NorthPolarStereo().transform_points(dproj,xv.flatten(),yv.flatten())
+        data_i = griddata(coords_in[:,0:2], data2d_h, coords_out[:,0:2], method='linear')
+
+    else:
+        print("Error: interp_to_latlon failed")
+        sys.exit(1)
+        
+    return data_i
+
 
 
 
@@ -138,7 +210,8 @@ def polygons_to_geodataframe(lon_poly_coords, lat_poly_coords, data, eps=10):
 
 
 # read in polygons from scrip file:
-name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+#name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+#name="/Users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne256pg2.scrip.nc"
 #name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
@@ -146,13 +219,14 @@ name="/Users/mt/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 #name="/ascldap/users/mataylo/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
 #name="/Users/mt/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
+name="/Users/mataylo/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
 
 
 file1 = Dataset(name,"r")
 ncols = file1.dimensions["grid_size"].size
 print("ncols = ",ncols)
-#clat1 = file1.variables["grid_center_lat"][:]
-#clon1 = file1.variables["grid_center_lon"][:]
+clat1 = file1.variables["grid_center_lat"][:]
+clon1 = file1.variables["grid_center_lon"][:]
 xlat = file1.variables["grid_corner_lat"][:,:]
 xlon = file1.variables["grid_corner_lon"][:,:]
 area = file1.variables["grid_area"][:]
@@ -191,6 +265,7 @@ dpi=4*dpi
 # global plot
 xlim=(-180.,180.)
 ylim=(-90.,90.)
+
 
 
 
@@ -249,8 +324,6 @@ plot2 = gdf.hvplot.polygons(cmap=colormap,clim=clev,
 
 fig = hv.render(plot2)
 fig.savefig("hvplot-mpl.png",  bbox_inches='tight')
-# cant call this way:
-#hv.save(plot2, filename="area-hvplot-save.png,dpi=round(1.8*dpi))plot2.save
 end=time.time()
 print(f"{end-start:.2f}s")
 
@@ -271,10 +344,6 @@ corners=np.stack([xpoly[:,:,0],xpoly[:,:,1]],axis=2)
 
 
 ax = pyplot.axes(projection=ccrs.PlateCarree())
-ax.set_global()
-
-fig=matplotlib.pyplot.figure()
-ax = matplotlib.pyplot.axes(projection=proj)
 ax.set_global()
 
 # antialized=False to remove white lines between cells.
@@ -330,11 +399,36 @@ end=time.time()
 print(f"{end-start:.2f}s")
 
 
-sys.exit()
+os.exit(0)
 #
-#the two approaches below take 100x longer than the above
+#the approaches below take 10x longer than the above
 #probably related to when the polygons are rasterized
 #
+
+################################################################################
+#
+# inteprolate to lat/lon
+#
+#
+################################################################################
+print("matplotlib/interpolate to lat/lon... ",end='')
+start= time.time()
+nlat=height // 2
+nlon=2*nlat
+lon_i = np.linspace(0, 360, nlon,endpoint=False)  
+dlat2=90./nlat
+lat_i = np.linspace(-90+dlat2, 90-dlat2, nlat)  
+data_i=interp_to_latlon(area,clat1,clon1,lat_i,lon_i)
+
+ax = pyplot.axes(projection=ccrs.PlateCarree())
+ax.set_global()
+pl=ax.pcolormesh(lon_i, lat_i, data_i,vmin=mn,vmax=mx, cmap=colormap)
+pyplot.savefig('mpl-latlon.png',dpi=dpi,orientation="portrait",bbox_inches='tight')
+
+end=time.time()
+print(f"{end-start:.2f}s")
+
+
 
 
 
@@ -368,7 +462,7 @@ hv_polys.opts(xaxis=None, yaxis=None)
 
 
 # tweak dpi to get close to 1600x800 plot
-hv.save(hv_polys, filename="hv-mpl-save.png") # ,dpi=round(1.8*dpi))
+hv.save(hv_polys, filename="hv-mpl-save.png") 
 end=time.time()
 print(f"{end-start:.2f}s")
 
