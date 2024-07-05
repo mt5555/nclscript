@@ -1,7 +1,8 @@
 import numpy, os, sys, getopt
 
-# needed for ngl_plot
-import Ngl
+import importlib.util
+if importlib.util.find_spec("Ngl") is not None: 
+    import Ngl
 
 def ngl_vertprofile(wks,coldata,lev,xbnds,ybnds,title,units,time):
 

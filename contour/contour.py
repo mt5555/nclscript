@@ -1,17 +1,21 @@
 #!/usr/bin/env python
 # Contour over maps of lat/lon data
-# python contour_latlon.py
-#
 #
 # contour.py -i inputfile  [options]  varname
 #
-from __future__ import print_function
+# Should run if Ngl module is not aviable, as long was one is using
+# MPL plots, and avoids pressure interpolation in extract_level()
+# pressure interpolation requires Ngl.vinth2p (and will have a runtime
+# error of Ngl is missing)
+#
+#from __future__ import print_function
 import os, numpy
-import Ngl
 from netCDF4 import Dataset
-from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon, mpl_streamlines
+from plotutils import mpl_plot, myargs, interp_to_latlon, mpl_streamlines
+from nglutils import extract_level, ngl_plot, ngl_open, ngl_end, ngl_read_colormap
 from matplotlib import pyplot
 from vertprofile import ngl_vertprofile
+
 
 inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl, \
 scrip_file,gll_file,se_file,contour_opt,coutlines \
@@ -298,9 +302,9 @@ if plev != None:
 wks_type = "pdf"
     
 if use_ngl:
-    wks = Ngl.open_wks(wks_type,outname)
+    wks = ngl_open(wks_type,outname)
     if levdim and nlev>0:
-        wks_v = Ngl.open_wks(wks_type,outname+"_v")
+        wks_v = ngl_open(wks_type,outname+"_v")
     print("NGL output file: ",outname+"."+wks_type)
     cmap='MPL_viridis'
     #cmap="WhiteBlueGreenYellowRed"
@@ -308,7 +312,7 @@ if use_ngl:
     #cmap="StepSeq25"
     #cmap="BlAqGrYeOrReVi200"
     if compute_avedx:
-        cmap = Ngl.read_colormap_file(cmap)
+        cmap = ngl_read_colormap(cmap)
         cmap=numpy.flip(cmap,0)
 
 
@@ -319,7 +323,7 @@ if use_ngl:
 
     if var1=="ps" and len(clev)==3:
         # custom colormap with center at 1000mb
-        cmap = Ngl.read_colormap_file("MPL_RdYlBu")
+        cmap = ngl_read_colormap("MPL_RdYlBu")
         n=cmap.shape
         n=n[0]-1
         nint=(clev[1]-clev[0])/clev[2]
@@ -582,4 +586,4 @@ if use_ngl:
     del wks
     if "wks_v" in locals():
         del wks_v
-    Ngl.end()
+    ngl_end()
