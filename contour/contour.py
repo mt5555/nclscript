@@ -11,10 +11,10 @@
 #from __future__ import print_function
 import os, numpy
 from netCDF4 import Dataset
-from plotutils import mpl_plot, myargs, interp_to_latlon, mpl_streamlines
-from nglutils import extract_level, ngl_plot, ngl_open, ngl_end, ngl_read_colormap
 from matplotlib import pyplot
-from vertprofile import ngl_vertprofile
+from plotutils import mpl_plot, myargs, interp_to_latlon, mpl_streamlines
+from nglutils import  ngl_plot, ngl_open, ngl_end, ngl_read_colormap, \
+                      extract_level, ngl_vertprofile
 
 
 inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl, \
