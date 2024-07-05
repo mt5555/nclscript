@@ -13,7 +13,8 @@ from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlo
 from matplotlib import pyplot
 from vertprofile import ngl_vertprofile
 
-inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file,se_file \
+inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl, \
+scrip_file,gll_file,se_file,contour_opt,coutlines \
     = myargs(os.sys.argv)
 
 var1 = varnames[0]
@@ -329,7 +330,7 @@ if use_ngl:
         else:
             x1=int(n/nint +  n-  ( (clev[1]-clev[0]) / (clev[1]-1000) )*n/2 )
             x2=n
-        print("using submit contour map centered at 1000mb:",cmap.shape,x1,x2)
+        print("using symmetric contour map centered at 1000mb:",cmap.shape,x1,x2)
         cmap=cmap[x1:x2,:]
 
 
@@ -343,7 +344,8 @@ else:
         if clev[1]==-clev[0]:
             cmap='Spectral'     # good diverging colormap
             #cmap='RdYlBu'     # good diverging colormap
-    
+    if var1=="ps" and len(clev)==3:
+        cmap='RdYlBu'
 
 for t in range(t1,t2):
 
@@ -470,7 +472,7 @@ for t in range(t1,t2):
         data_i=interp_to_latlon(data2d,lat,lon,lat_i,lon_i)
         if use_ngl:
             ngl_plot(wks,data_i,lon_i,lat_i,title,longname_t,units,
-                     proj,clev,cmap,scrip_file,se_file)
+                     proj,clev,cmap,scrip_file,se_file,contour_opt,coutlines)
         else:
             if compute_streamlines:
                 data_i_2=interp_to_latlon(data2d_2,lat,lon,lat_i,lon_i)
@@ -479,19 +481,19 @@ for t in range(t1,t2):
             else:
                 print("calling mpl_plot")
                 mpl_plot(data_i,lon_i,lat_i,title,longname,units,
-                         proj,clev,cmap,scrip_file,gll_file)
+                         proj,clev,cmap,scrip_file,gll_file,contour_opt,coutlines)
             pyplot.savefig(outname,dpi=300,orientation="portrait")
             pyplot.close()
     elif use_ngl:
         ngl_plot(wks,data2d,lon,lat,title,longname_t,units,
-                 proj,clev,cmap,scrip_file,se_file,data2d_plot2)
+                 proj,clev,cmap,scrip_file,se_file,contour_opt,coutlines,data2d_plot2)
     else:
         if compute_streamlines:
             mpl_streamlines(data2d,data2d_2,lon,lat,title,longname,units,
                             proj,clev,cmap)
         else:
             mpl_plot(data2d,lon,lat,title,longname,units,
-                 proj,clev,cmap,scrip_file,gll_file)
+                     proj,clev,cmap,scrip_file,gll_file,contour_opt,coutlines)
         #pyplot.show()
         pyplot.savefig(outname,dpi=300,orientation="portrait")
         pyplot.close()

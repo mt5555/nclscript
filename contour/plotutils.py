@@ -52,6 +52,7 @@ def myargs(argv):
     gllfile = ''
     se_file = ''
     varname = ''
+    contour_opt = ''
     use_ngl = True
     timeindex = None
     levindex = None
@@ -61,24 +62,29 @@ def myargs(argv):
     name = argv[0]
     projection='latlon'
     try:
-        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:e:")
+        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:e:f:o:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
-        print (name,' -j inputfile2')
-        print (name,' -t timeindex starting at 1 [0=default-last frame. -1=all times]')
-        print (name,' -k levindex starting at 1  [default: 3*nlev/4]')
-        print (name,' -p pressure(mb)  interpolate to pressure level')
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax       contour level min,max with 40 levels')
         print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
         print (name,' -c cmin,cmax,cinc,logbase  log levels, min,max,inc (in log space),base (2 or 10)')
-        print (name,' -m map projeciton  latlon,US1,oro,andes,hamalaya,etc...')
+        print (name,' -e Exodus.g file for plotting spectral elements')
+        print (name,' -f contour fill: area,raster,la (lines+area), lo (lines only)')
+        print (name,' -g gll_subcell_file')
+        print (name,' -j inputfile2')
+        print (name,' -k levindex starting at 1  [default: 3*nlev/4]')
+        print (name,' -m map projeciton:  latlon,US1,oro,andes,hamalaya,etc...')
+        print (name,' -o 0,1  continential outlines 1=on/0=off')
+        print (name,' -p pressure(mb)  interpolate to pressure level')
         print (name,' -r 180x360  remap to lat/lon uni grid')
         print (name,' -r 181x360  remap to lat/lon cap grid')
-        print (name,' -y ngl,mpl')
         print (name,' -s scriptfile')
-        print (name,' -g gll_subcell_file')
-        print (name,' -e Exodus.g file for plotting spectral elements')
+        print (name,' -t timeindex starting at 1 [0=default-last frame. -1=all times]')
+        print (name,' -y ngl,mpl')
+
+
+
         sys.exit(2)
     for opt, arg in opts:
         if opt in ("-i"):
@@ -112,9 +118,14 @@ def myargs(argv):
             gllfile = arg
         elif opt in ("-e"):
             se_file = arg
-                
+        elif opt in ("-f"):
+            contour_opt = arg
+        elif opt in ("-o"):
+            coutlines = int(arg)
+
+    print("inputfile=",inputfile)
     return inputfile,inputfile2,args,projection,timeindex,levindex,pressurelev,clev,\
-        nlatlon_interp,use_ngl,scripfile,gllfile,se_file
+        nlatlon_interp,use_ngl,scripfile,gllfile,se_file,contour_opt,coutlines
 
 
 def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
@@ -227,7 +238,7 @@ def extract_level(dataf,klev,plev,PS,hyam,hybm,kidx=0):
 
 
 def ngl_plot(wks,data2d,lon,lat,title,longname,units,
-             projection,clev,cmap,scrip_file,se_file,data2d_2=numpy.array([])):
+             projection,clev,cmap,scrip_file,se_file,contour_opt,coutlines,data2d_2=numpy.array([])):
 
     se_num=0
     if os.path.isfile(se_file):
@@ -291,11 +302,19 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 
 # defaults. some projection options might change:
     res.cnFillOn              = True           # Turn on contour fill.
+    if contour_opt=='lo':
+        res.cnFillOn              = False      # Turn on contour fill off.
+
     res.cnLinesOn             = False          # Turn off contour lines
+    if contour_opt=='lo' or contour_opt=='la':
+        res.cnLinesOn             = True       # Turn on contour lines
+
     res.cnLineLabelsOn        = False          # Turn off line labels.
     res.cnInfoLabelOn         = False          # Turn off info label.
 
     res.mpOutlineOn          = True
+    if coutlines==0:     res.mpOutlineOn          = False
+
     res.mpFillOn             = False
     res.mpGridAndLimbOn      = False    # dont draw grid lines
     #res.mpShapeMode          = "FreeAspect"
@@ -314,14 +333,10 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         # no continenents, turn on contour lines
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "MaximalArea"
-        res.mpOutlineOn          = False
-        res.cnLinesOn            = True
     elif projection == "latlon-nc2":
         # no continenents, turn off contour lines
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "MaximalArea"
-        res.mpOutlineOn          = False
-        res.cnLinesOn            = False
     elif projection == "US1":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -405,8 +420,6 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75.
         res.mpMinLonF = 25.
         res.mpMaxLonF = 175.
-        res.cnLinesOn             = True          # Turn off contour lines
-        res.mpOutlineOn          = False
     elif projection == "barotopo":
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
@@ -415,9 +428,8 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75. 
         res.mpMinLonF = -150.
         res.mpMaxLonF = 20.
-        res.cnLinesOn             = True          # Turn off contour lines
-        res.mpOutlineOn          = False
     elif projection == "barotopo-nc2":
+        # no continenents, turn off contour lines
         res.mpProjection = "CylindricalEquidistant"
         res.mpLimitMode = "LatLon"
         #res.mpCenterLonF         = -90.
@@ -425,8 +437,6 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.mpMaxLatF = 75. 
         res.mpMinLonF = -150.
         res.mpMaxLonF = 20.
-        res.mpOutlineOn          = False
-        res.cnLinesOn            = False
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -443,10 +453,15 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
         res.sfXCellBounds = clon
         res.sfYCellBounds = clat
     else:
-        res.cnFillMode            = "AreaFill"
-        if (nlevels>25):
-            print("more than 25 contours, switching to raserfill")
+        if contour_opt=='area' or contour_opt=='la':
+            res.cnFillMode            = "AreaFill"
+        elif contour_opt=='raster':
             res.cnFillMode            = "RasterFill"
+        else:
+            res.cnFillMode            = "AreaFill"
+            if (nlevels>25):
+                print("more than 25 contours, switching to raserfill")
+                res.cnFillMode            = "RasterFill"
         res.cnRasterSmoothingOn = True
         res.sfXArray = lon[:]
         res.sfYArray = lat[:]
@@ -460,7 +475,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 #        res.gsnMaximize           = True        
 #        res.gsnPaperOrientation   = "portrait"
 
-    res.lbLabelAutoStride   = True         # Clean up labelbar labels.
+    #res.lbLabelAutoStride   = True         # Clean up labelbar labels.
     #res.lbAutoManage = True
     #res.lbLabelStride       = 10
     res.lbBoxLinesOn        = False        # Turn of labelbar box lines.
@@ -513,8 +528,8 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 
         res3=res
         res3.mpOutlineOn          = False
-        res3.cnFillOn             = False         # Turn on contour fill.
-        res3.cnLinesOn            = True          # Turn off contour lines
+        res3.cnFillOn             = False         # Turn off contour fill.
+        res3.cnLinesOn            = True          # Turn on contour lines
         #res3.cnLineColor          = "White"
 
         #res3.cnLevelSelectionMode  = "AutomaticLevels"
@@ -573,7 +588,7 @@ def ngl_plot(wks,data2d,lon,lat,title,longname,units,
 
     
 
-def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfile):
+def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfile,contour_opt,coutlines):
     
     # Setup the plot
     figure = pyplot.figure() #(figsize=(15, 10))
@@ -584,10 +599,13 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         vmin=None
         vmax=None
         nlevels=int(round(clev[0]))
+        levels=nlevels  # matplotlib will choose values
     elif len(clev)==3:
         vmin=clev[0]
         vmax=clev[1]
         nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
+        levels=[vmin+i*clev[2] for i in range(nlevels+1)]
+        print("levels=",levels)
     #elif len(clev)==4:
     #not all MPL plotting options support list of levels
     else:
@@ -670,17 +688,31 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             cellbounds=True
             compute_tri=False
 
+    pl2=None
     print("colormap min/max=",vmin,vmax)
     print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
     if struct:
         data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
         print("MPL plotting structured data (with added cyclic point)")
-        if nlevels>25:
-            pl=ax.pcolormesh(lon2, lat, data2d_ext,vmin=vmin,vmax=vmax,
+        if contour_opt=='' or contour_opt=='raster':
+            print("using pcolormesh")
+            pl=ax.pcolormesh(lon2, lat, data2d_ext,levels,vmin=vmin,vmax=vmax,
                              transform=dataproj, cmap=cmap)
-        else:
-            pl=ax.contourf(lon2, lat, data2d_ext, nlevels,vmin=vmin,vmax=vmax,
+        elif contour_opt=='la':
+            print("contour lines + area fill")
+            pl=ax.contourf(lon2, lat, data2d_ext, levels,vmin=vmin,vmax=vmax,
                            transform=dataproj, cmap=cmap)
+            pl2=ax.contour(pl, levels,vmin=vmin,vmax=vmax,transform=dataproj,
+                           colors='k',linewidths=.5)
+        elif contour_opt=='lo':
+            print("contour lines only")
+            pl=ax.contour(lon2, lat, data2d_ext, levels,vmin=vmin,vmax=vmax,
+                           transform=dataproj, colors='k',linewidths=.5)
+        elif contour_opt=='area':
+            print("using contourf (fill only)")
+            pl=ax.contourf(lon2, lat, data2d_ext, levels,vmin=vmin,vmax=vmax,
+                           transform=dataproj, cmap=cmap)
+        
     elif compute_tri:
         print("MPL plot using internal Delaunay triangulation")
         # do the triangulation in the plot coordinates for better results
@@ -692,6 +724,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         
         pl = ax.tripcolor(tc[:,0],tc[:,1], datai,vmin=vmin, vmax=vmax,
                           shading='gouraud',cmap=cmap)
+
+        #
+        # as with above, we could put in options for tricontour & tricontourf
+        #
     elif cellbounds:
         from matplotlib.collections import PolyCollection
         print("MPL plot using scrip cells")
@@ -716,7 +752,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         corners=numpy.stack([ccoords[xi,:,0],ccoords[xi,:,1]],axis=2)
         
         # create cells
-        p = PolyCollection(corners, array=datai, antialiaseds=True)
+        # antialized=False needed to avoid visable cell edges
+        # but when combined with alpha/transparancy, cell edges become visiable again
+        # due to some issue with how alpha is applied (or not applied) at edges
+        p = PolyCollection(corners,array=datai,edgecolor='none',linewidths=0,antialiased=False)
         p.set_clim([vmin,vmax])
         pl=ax.add_collection(p)
     else:
@@ -748,14 +787,22 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
                           mask=mask,shading='gouraud',cmap=cmap)
         # plot some of the triangles to make sure they are ok:
         #ax.triplot(tcoords[:,0],tcoords[:,1],tri[1:100,:],'go-')
-        
 
+        # if we specify the trianglization "tri", then can also give data per vertex or per face
+        # for per-face data, might need facecolors=zfaces option.  but for facedata, probably 
+        # faster to just use the above polycollection, which should be identical
+        # HOWEVER: tripcolor+facecolors may avoid the edge effects with Polycollection + transparancey
+
+    pl.set_clim([vmin,vmax])
     if units=="":
-        cb = pyplot.colorbar(pl, orientation='horizontal', 
-                             label='%s'%(longname),shrink=0.75, pad=0.1)
+        label='%s'%(longname)
     else:
-        cb = pyplot.colorbar(pl, orientation='horizontal', 
-                             label='%s (%s)'%(longname, units),shrink=0.75, pad=0.1)
+        label='%s (%s)'%(longname, units)
+
+    cb = pyplot.colorbar(pl, orientation='horizontal', 
+                        label=label,shrink=0.75, pad=0.1)
+    # add in contour lines to the color bar:
+    #if pl2!=None: cb.add_lines(pl2)
 
     # Plot GLL nodes for perspective
     #pl = ax.plot(lon, lat, 'k.', projection=dataproj, markersize=1)
