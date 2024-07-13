@@ -258,7 +258,11 @@ if "hyam" in infile.variables.keys():
     hybm=infile.variables['hybm'][:]
     hyai=infile.variables['hyai'][:]
     hybi=infile.variables['hybi'][:]
-
+else:
+    hyam=None
+    hybm=None
+    hyai=None
+    hybi=None
 
 
 ################################################################
@@ -303,7 +307,7 @@ wks_type = "pdf"
     
 if use_ngl:
     wks = ngl_open(wks_type,outname)
-    if levdim and nlev>0:
+    if levdim and nlev>1:
         wks_v = ngl_open(wks_type,outname+"_v")
     print("NGL output file: ",outname+"."+wks_type)
     cmap='MPL_viridis'
@@ -401,19 +405,21 @@ for t in range(t1,t2):
         print(t+1,"time=",times[t]," time & space dimensions only")
         dimname=dataf.dimensions
 
-        data2d=dataf[t,...]
+        data2d=numpy.squeeze(dataf[t,...],0)
         if compute_prect:
             data2d=data2d + PRECC[t,...]
             longname="PRECT"
         if compute_windstress:
+            print("fix this code - should this be u^2 + v^2?")
+            sys.exit(1)
             temp=data2d[:,0]**2 + data2d[:,0]**2
             data2d=temp
             longname="wind stress"
-        print(t,"time=",times[t])
     elif (levdim):
-        print("k=",klev,"/",nlev_data,"plev=",plev)
+        print("No time dimension.  k=",klev,"/",nlev_data,"plev=",plev)
         data2d=extract_level(dataf[...],klev,plev,ps[...],hyam,hybm)
     else:
+        print("No time or level dimension, assuming space dimension only")
         data2d=dataf[:]
         if compute_avedx:
             data2d_2=dataf2[:]
@@ -506,18 +512,17 @@ for t in range(t1,t2):
     #
     # 1D vertical profile at a specified point
     #
-    # data2d[min_i1] will give value for either 1D or 2D data
-    min_i1=[183,115]
-    max_i1=[183,112]
-    latmin  = lat[min_i1[0]]
-    lonmin  = lon[min_i1[1]]
-    latmax  = lat[max_i1[0]]
-    lonmax  = lon[max_i1[1]]
-    print("vert profile1 at ",min_i1,"lon=",lonmin,'lat=',latmin)
-    print("vert profile2 at ",max_i1,"lon=",lonmax,'lat=',latmax)
+    if levdim and nlev_data>1 and have_ps and use_ngl:
+        # data2d[min_i1] will give value for either 1D or 2D data
+        min_i1=[183,115]
+        max_i1=[183,112]
+        latmin  = lat[min_i1[0]]
+        lonmin  = lon[min_i1[1]]
+        latmax  = lat[max_i1[0]]
+        lonmax  = lon[max_i1[1]]
+        print("vert profile1 at ",min_i1,"lon=",lonmin,'lat=',latmin)
+        print("vert profile2 at ",max_i1,"lon=",lonmax,'lat=',latmax)
 
-
-    if levdim and nlev_data>0 and have_ps and use_ngl:
         ncols=len((min_i1,max_i1))
         # add ref profile to plot?
         #if var1=="Th" or var1=="POTT":

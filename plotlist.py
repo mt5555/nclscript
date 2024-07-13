@@ -8,22 +8,33 @@ import matplotlib.pyplot as plt
 #
 #
 # read in data (y axis data):
-print("reading file...")
-data = np.loadtxt("tbot.out",usecols=(1,))
+#filename = "swtc2-ne30.linf.errors"
+filename = "swtc2-CA.linf.errors"
+title = "SWTC2"
+ylabel = "max error"
 
-# read in time ( x axis data )
+#filename = "TBOT.out"
+#title = "min tbot"
+#ylabel = "degrees K'
+
+
+
+
+print("reading file...")
+data = np.loadtxt(filename,usecols=(1,))
+
+t  = np.loadtxt(filename,usecols=(0,))
 # or compute time based on knowledge of timestep between samples:
 # statefreq=24, timestep=8.33s
-delta = 24*8.3333333333333333333/(24*3600.)
-t = np.arange(0, delta*data.size, delta)
+#delta = 24*8.3333333333333333333/(24*3600.)
+#t = np.arange(0, delta*data.size, delta)
 
 
 print("constructing plot...")
 fig, axs = plt.subplots()
-axs.plot(t,data,label='min tbot',color='b')
+axs.plot(t,data,label=title,color='b')
 axs.grid(True)
-axs.set(xlabel='days', ylabel='degrees K',
-       title='TBOT min')
+axs.set(xlabel='days', ylabel=ylabel,title=title)
 
 #plt.show()
 print("writing plot...")
