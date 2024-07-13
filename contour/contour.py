@@ -303,7 +303,8 @@ if plev != None:
 
     
 
-wks_type = "pdf"
+#wks_type = "pdf"
+wks_type = "png"
     
 if use_ngl:
     wks = ngl_open(wks_type,outname)

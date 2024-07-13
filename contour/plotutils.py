@@ -3,7 +3,7 @@ import numpy, os, sys, getopt
 # needed for mpl_plot
 from cartopy import crs
 from cartopy.util import add_cyclic_point
-from matplotlib import tri as mpl_tri
+import matplotlib.tri as mpltri
 from matplotlib import pyplot
 from scipy.interpolate import griddata
 # needed for ngl_plot
@@ -224,8 +224,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         print("Error: mpl len(clev) <> 1,3")
         sys.exit(1)
 
-            
     print("num contour levels=",nlevels)
+    print("colormap min/max=",vmin,vmax)
 
     # set_extent[lon_min,lon_max,lat_min,lat_mx]
     if proj=="latlon":
@@ -301,8 +301,6 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             compute_tri=False
 
     pl2=None
-    print("colormap min/max=",vmin,vmax)
-    print("data min/max=",numpy.amin(data2d),numpy.amax(data2d))
     if struct:
         data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
         print("MPL plotting structured data (with added cyclic point)")
@@ -329,31 +327,40 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         print("MPL plot using internal Delaunay triangulation")
         # do the triangulation in the plot coordinates for better results
         tcoords = plotproj.transform_points(dataproj,lon[:],lat[:])
-        # remove remove non-visible points (is this needed?)
-        xi=numpy.max(tcoords[:,:],1) !=numpy.inf
-        tc=tcoords[xi,:]
-        datai=data2d[xi]  
+
+        if ("proj=eqc" in plotproj.srs) or ("proj=robin" in plotproj.srs):
+            # all polygons always visable
+            tc=tcoords
+            datai=data2d
+        else:   # if "proj=ortho" in plotproj.srs:
+            # Triangulation chokes if there are  non-visible points
+            xi=numpy.logical_and ( numpy.isfinite(tcoords[:,0]), numpy.isfinite(tcoords[:,1]))
+            tc=tcoords[xi,:]
+            datai=data2d[xi]  
+
 
         # compute triangularization
-        tri=mpl_tri(tc[:,0],tc[:,1])
+        tri=mpltri.Triangulation(tc[:,0],tc[:,1])
 
-        # if lat/lon:  all cut triangles - duplicate on both sides
-        # if Robinson
-        # else (orthogonal)  remove non-visible, done above
-        diam = np.hypot(tc[triang.triangles,0].mean(axis=1),
-                         tc[triang.triangles,1].mean(axis=1))
-        gmin=numpy.nanmin(diam[diam != numpy.inf])
-        gmax=numpy.nanmax(diam[diam != numpy.inf])
-        print("triangle max lengths: ",gmin,gmax)
-        tri.set_mask( numpy.logical_or(diam > 25*gmin, numpy.isnan(dmax)))
+        # diam = numpy.hypot(tc[tri.triangles,0].mean(axis=1),
+        #                 tc[tri.triangles,1].mean(axis=1))
+        #gmin=numpy.nanmin(diam[diam != numpy.inf])
+        #gmax=numpy.nanmax(diam[diam != numpy.inf])
+        #print("triangle max lengths: ",gmin,gmax)
+        #tri.set_mask( numpy.logical_or(diam > 95*gmin, numpy.isnan(diam)))
 
-        
-        pl = ax.tripcolor(tc[:,0],tc[:,1], tri, datai,vmin=vmin, vmax=vmax,
-                          shading='gouraud',cmap=cmap)
+        #tripcolor requires vmin/vmax set
+        if vmin==None:
+            vmin=numpy.amin(data2d)
+            vmax=numpy.amax(data2d)
+            print("using min/max for colormap min/max=",vmin,vmax)
 
-        # plot some of the triangles to make sure they are ok:
-        ax.triplot(tcoords[:,0],tcoords[:,1],tri[1:100,:],'go-')
-        #
+        # gouraud shading requires we remove non-visable triangles        
+        # gouraud shading seems broken for pdf, be sure to use png
+        pl = ax.tripcolor(tri, datai,vmin=vmin, vmax=vmax,
+                          shading='gouraud',cmap=cmap,antialiased=False)
+        #ax.triplot(tri,'g-',lw=.1) # plot triangles
+
         # as with above, we could put in options for tricontour & tricontourf
         #
     elif cellbounds:
