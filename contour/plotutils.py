@@ -3,6 +3,7 @@ import numpy, os, sys, getopt
 # needed for mpl_plot
 from cartopy import crs
 from cartopy.util import add_cyclic_point
+from matplotlib import tri as mpl_tri
 from matplotlib import pyplot
 from scipy.interpolate import griddata
 # needed for ngl_plot
@@ -327,14 +328,30 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         print("MPL plot using internal Delaunay triangulation")
         # do the triangulation in the plot coordinates for better results
         tcoords = plotproj.transform_points(dataproj,lon[:],lat[:])
-        # need to remove non-visible points
-        xi=tcoords[:,0]!=numpy.inf
+        # remove remove non-visible points (is this needed?)
+        xi=numpy.max(tcoords[:,:],1) !=numpy.inf
         tc=tcoords[xi,:]
-        datai=data2d[:][xi]  # convert to numpy array, then subset
+        datai=data2d[xi]  
+
+        # compute triangularization
+        tri=mpl_tri(tc[:,0],tc[:,1])
+
+        # if lat/lon:  all cut triangles - duplicate on both sides
+        # if Robinson
+        # else (orthogonal)  remove non-visible, done above
+        diam = np.hypot(tc[triang.triangles,0].mean(axis=1),
+                         tc[triang.triangles,1].mean(axis=1))
+        gmin=numpy.nanmin(diam[diam != numpy.inf])
+        gmax=numpy.nanmax(diam[diam != numpy.inf])
+        print("triangle max lengths: ",gmin,gmax)
+        tri.set_mask( numpy.logical_or(diam > 25*gmin, numpy.isnan(dmax)))
+
         
-        pl = ax.tripcolor(tc[:,0],tc[:,1], datai,vmin=vmin, vmax=vmax,
+        pl = ax.tripcolor(tc[:,0],tc[:,1], tri, datai,vmin=vmin, vmax=vmax,
                           shading='gouraud',cmap=cmap)
 
+        # plot some of the triangles to make sure they are ok:
+        ax.triplot(tcoords[:,0],tcoords[:,1],tri[1:100,:],'go-')
         #
         # as with above, we could put in options for tricontour & tricontourf
         #
