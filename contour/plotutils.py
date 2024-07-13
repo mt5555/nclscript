@@ -56,6 +56,7 @@ def myargs(argv):
     levindex = None
     pressurelev = None
     nlatlon_interp=None
+    coutlines=0
     clev = None
     name = argv[0]
     projection='latlon'
@@ -306,7 +307,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         print("MPL plotting structured data (with added cyclic point)")
         if contour_opt=='' or contour_opt=='raster':
             print("using pcolormesh")
-            pl=ax.pcolormesh(lon2, lat, data2d_ext,levels,vmin=vmin,vmax=vmax,
+            pl=ax.pcolormesh(lon2, lat, data2d_ext,vmin=vmin,vmax=vmax,
                              transform=dataproj, cmap=cmap)
         elif contour_opt=='la':
             print("contour lines + area fill")
@@ -357,7 +358,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         dmin=min(d)
         print("cell diameter min,max:",dmin,dmax)
         xi=(d < 100*dmin)  # and (x1!=numpy.inf) and (y1!=numpy.inf)
-        datai=data2d[:][xi]
+        datai=data2d[xi]
         print("cells removed: ",len(data2d)-len(datai),"out of",len(data2d))
         corners=numpy.stack([ccoords[xi,:,0],ccoords[xi,:,1]],axis=2)
         
