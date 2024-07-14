@@ -350,17 +350,31 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         #tri.set_mask( numpy.logical_or(diam > 95*gmin, numpy.isnan(diam)))
 
         #tripcolor requires vmin/vmax set
-        if vmin==None:
-            vmin=numpy.amin(data2d)
-            vmax=numpy.amax(data2d)
-            print("using min/max for colormap min/max=",vmin,vmax)
 
         # gouraud shading requires we remove non-visable triangles        
         # gouraud shading seems broken for pdf, be sure to use png
-        pl = ax.tripcolor(tri, datai,vmin=vmin, vmax=vmax,
-                          shading='gouraud',cmap=cmap,antialiased=False)
-        #ax.triplot(tri,'g-',lw=.1) # plot triangles
+        if contour_opt=='' or contour_opt=='raster':
+            if vmin==None:
+                vmin=numpy.amin(data2d)
+                vmax=numpy.amax(data2d)
+                print("using data min/max for colormap, min/max=",vmin,vmax)
+            print("using tripcolor")
+            pl = ax.tripcolor(tri, datai,vmin=vmin, vmax=vmax,
+                              shading='gouraud',cmap=cmap,antialiased=False)
+        elif contour_opt=='la':
+            print("contour lines + area fill")
+            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
+            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax, 
+                                colors='k',linewidths=.5)
+        elif contour_opt=='lo':
+            print("contour lines only")
+            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax,
+                                colors='k',linewidths=.5)
+        elif contour_opt=='area':
+            print("using contourf (fill only)")
+            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
 
+        #ax.triplot(tri,'g-',lw=.1) # plot triangles for debugging
         # as with above, we could put in options for tricontour & tricontourf
         #
     elif cellbounds:
@@ -372,6 +386,14 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         # x3d[:,:,0:3] x,y,z coords of 
         ccoords = plotproj.transform_points(proj3d,x3d[:,:,0],x3d[:,:,1],x3d[:,:,2])
         # ccoords will be [:,:,0:2]  for lat,lon,r but r=0
+
+        # better approach: see ../polycollection/plotpoly_mpl.py
+        # for lat/lon & robin, look for cut cells, fix them to +180, and duplicate at -180
+        # for other projections, just mask out points with numpy.isfinite=False
+        # no need to project to 3D first
+        #
+
+
         # remove bad cells:
         # cells that stradle any coordinate branch cut, or
         # are non-visible
@@ -400,6 +422,12 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
         x3d = proj3d.transform_points(dataproj,lon[:],lat[:])
         tcoords = plotproj.transform_points(proj3d,x3d[:,0],x3d[:,1],x3d[:,2])
+
+        # better approach: see ../polycollection/plotpoly_mpl.py
+        # for lat/lon & robin, look for cut cells, fix them to +180, and duplicate at -180
+        # for other projections, just mask out points with numpy.isfinite=False
+        # no need to project to 3D first
+        #
 
         #Remove bad triangles:
         x0=tcoords[tri[:,0],0]
