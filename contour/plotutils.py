@@ -298,7 +298,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             clat=clat*180/numpy.pi
         if clon.shape[0] == len(lat):
             cellbounds=True
-            compute_tri=False
+
 
     pl2=None
     if struct:
@@ -323,60 +323,6 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             pl=ax.contourf(lon2, lat, data2d_ext, levels,vmin=vmin,vmax=vmax,
                            transform=dataproj, cmap=cmap)
         
-    elif compute_tri:
-        print("MPL plot using internal Delaunay triangulation")
-        # do the triangulation in the plot coordinates for better results
-        tcoords = plotproj.transform_points(dataproj,lon[:],lat[:])
-
-        if ("proj=eqc" in plotproj.srs) or ("proj=robin" in plotproj.srs):
-            # all polygons always visable
-            tc=tcoords
-            datai=data2d
-        else:   # if "proj=ortho" in plotproj.srs:
-            # Triangulation chokes if there are  non-visible points
-            xi=numpy.logical_and ( numpy.isfinite(tcoords[:,0]), numpy.isfinite(tcoords[:,1]))
-            tc=tcoords[xi,:]
-            datai=data2d[xi]  
-
-
-        # compute triangularization
-        tri=mpltri.Triangulation(tc[:,0],tc[:,1])
-
-        # diam = numpy.hypot(tc[tri.triangles,0].mean(axis=1),
-        #                 tc[tri.triangles,1].mean(axis=1))
-        #gmin=numpy.nanmin(diam[diam != numpy.inf])
-        #gmax=numpy.nanmax(diam[diam != numpy.inf])
-        #print("triangle max lengths: ",gmin,gmax)
-        #tri.set_mask( numpy.logical_or(diam > 95*gmin, numpy.isnan(diam)))
-
-        #tripcolor requires vmin/vmax set
-
-        # gouraud shading requires we remove non-visable triangles        
-        # gouraud shading seems broken for pdf, be sure to use png
-        if contour_opt=='' or contour_opt=='raster':
-            if vmin==None:
-                vmin=numpy.amin(data2d)
-                vmax=numpy.amax(data2d)
-                print("using data min/max for colormap, min/max=",vmin,vmax)
-            print("using tripcolor")
-            pl = ax.tripcolor(tri, datai,vmin=vmin, vmax=vmax,
-                              shading='gouraud',cmap=cmap,antialiased=False)
-        elif contour_opt=='la':
-            print("contour lines + area fill")
-            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
-            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax, 
-                                colors='k',linewidths=.5)
-        elif contour_opt=='lo':
-            print("contour lines only")
-            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax,
-                                colors='k',linewidths=.5)
-        elif contour_opt=='area':
-            print("using contourf (fill only)")
-            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
-
-        #ax.triplot(tri,'g-',lw=.1) # plot triangles for debugging
-        # as with above, we could put in options for tricontour & tricontourf
-        #
     elif cellbounds:
         from matplotlib.collections import PolyCollection
         print("MPL plot using scrip cells")
@@ -415,8 +361,79 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         p = PolyCollection(corners,array=datai,edgecolor='none',linewidths=0,antialiased=False)
         p.set_clim([vmin,vmax])
         pl=ax.add_collection(p)
-    else:
 
+    elif True:
+        # do the triangulation in the plot coordinates for better results
+        tcoords = plotproj.transform_points(dataproj,lon[:],lat[:])
+
+        if compute_tri:
+            print("MPL plot using internal Delaunay triangulation")
+            if ("proj=eqc" in plotproj.srs) or ("proj=robin" in plotproj.srs):
+                # all polygons always visable
+                tc=tcoords
+                datai=data2d
+            else:   # if "proj=ortho" in plotproj.srs:
+                # Triangulation chokes if there are  non-visible points
+                xi=numpy.logical_and ( numpy.isfinite(tcoords[:,0]), numpy.isfinite(tcoords[:,1]))
+                tc=tcoords[xi,:]
+                datai=data2d[xi]  
+            # compute triangularization
+            # result will not have any cut cells
+            tri=mpltri.Triangulation(tc[:,0],tc[:,1])
+        else:
+            print("MPL plot using GLL subcell triangulation")
+            # mask out cut cells, or cells at infinity
+            #Remove bad triangles:
+            x0=tcoords[tri[:,0],0]
+            y0=tcoords[tri[:,0],1]
+            x1=tcoords[tri[:,1],0]
+            y1=tcoords[tri[:,1],1]
+            x2=tcoords[tri[:,2],0]
+            y2=tcoords[tri[:,2],1]
+            d=numpy.empty(tri.shape)
+            d[:,0]=((x0-x1)**2 + (y0-y1)**2)**0.5
+            d[:,1]=((x0-x2)**2 + (y0-y2)**2)**0.5
+            d[:,2]=((x1-x2)**2 + (y1-y2)**2)**0.5
+            dmax=numpy.amax(d,axis=1)
+            gmin=numpy.nanmin(dmax[dmax != numpy.inf])
+            gmax=numpy.nanmax(dmax[dmax != numpy.inf])
+            print("triangle max lengths: ",gmin,gmax)
+            mask = numpy.logical_or( dmax > 25*gmin, numpy.isnan(dmax))
+            tri.set_mask(mask)
+
+            # Mask off unwanted triangles.
+            #triang.set_mask(np.hypot(x[triang.triangles].mean(axis=1),
+            #                         y[triang.triangles].mean(axis=1))
+            #                < min_radius)
+
+        # gouraud shading requires we remove non-visable triangles        
+        # gouraud shading seems broken for pdf, be sure to use png
+        if contour_opt=='' or contour_opt=='raster':
+            if vmin==None:
+                vmin=numpy.amin(data2d)
+                vmax=numpy.amax(data2d)
+                print("using data min/max for colormap, min/max=",vmin,vmax)
+            print("using tripcolor")
+            pl = ax.tripcolor(tri, datai,vmin=vmin, vmax=vmax,
+                              shading='gouraud',cmap=cmap,antialiased=False)
+        elif contour_opt=='la':
+            print("contour lines + area fill")
+            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
+            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax, 
+                                colors='k',linewidths=.5)
+        elif contour_opt=='lo':
+            print("contour lines only")
+            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax,
+                                colors='k',linewidths=.5)
+        elif contour_opt=='area':
+            print("using contourf (fill only)")
+            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
+
+        #ax.triplot(tri,'g-',lw=.1) # plot triangles for debugging
+        # as with above, we could put in options for tricontour & tricontourf
+        #
+    else:
+        # old code, should be replaced by above version
         print("MPL plot using gll subcell triangulation")
         # latlon->cartesian->local coords. this will put any seams at plot boundaries
         proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
