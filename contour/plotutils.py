@@ -275,16 +275,16 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         # by Euler, number of subcells is number of gll nodes -2
         if (nd[1] == len(lat)-2):
             ntris=nd[1]*2
-            tri=numpy.empty((ntris,3), dtype=int)
+            trigll=numpy.empty((ntris,3), dtype=int)
             
-            tri[::2,0]=ec[0,:]
-            tri[::2,1]=ec[1,:]
-            tri[::2,2]=ec[2,:]
+            trigll[::2,0]=ec[0,:]
+            trigll[::2,1]=ec[1,:]
+            trigll[::2,2]=ec[2,:]
             
-            tri[1::2,0]=ec[0,:]
-            tri[1::2,1]=ec[2,:]
-            tri[1::2,2]=ec[3,:]
-            tri=tri-1   # zero indexing
+            trigll[1::2,0]=ec[0,:]
+            trigll[1::2,1]=ec[2,:]
+            trigll[1::2,2]=ec[3,:]
+            trigll=trigll-1   # zero indexing
             compute_tri=False
 
     cellbounds=False
@@ -378,19 +378,25 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
                 tc=tcoords[xi,:]
                 datai=data2d[xi]  
             # compute triangularization
-            # result will not have any cut cells
+            # Note that this is different then the polycollection above,
+            # and the gll subcell triangles below, because this triangulation
+            # will not contain any cut cells, or non-visable cells
             tri=mpltri.Triangulation(tc[:,0],tc[:,1])
+            mask=None
         else:
             print("MPL plot using GLL subcell triangulation")
+            datai = data2d
+            tri=mpltri.Triangulation(tcoords[:,0],tcoords[:,1],trigll)
+
             # mask out cut cells, or cells at infinity
-            #Remove bad triangles:
-            x0=tcoords[tri[:,0],0]
-            y0=tcoords[tri[:,0],1]
-            x1=tcoords[tri[:,1],0]
-            y1=tcoords[tri[:,1],1]
-            x2=tcoords[tri[:,2],0]
-            y2=tcoords[tri[:,2],1]
-            d=numpy.empty(tri.shape)
+            # better approach - see Polycollection above
+            x0=tcoords[trigll[:,0],0]
+            y0=tcoords[trigll[:,0],1]
+            x1=tcoords[trigll[:,1],0]
+            y1=tcoords[trigll[:,1],1]
+            x2=tcoords[trigll[:,2],0]
+            y2=tcoords[trigll[:,2],1]
+            d=numpy.empty(trigll.shape)
             d[:,0]=((x0-x1)**2 + (y0-y1)**2)**0.5
             d[:,1]=((x0-x2)**2 + (y0-y2)**2)**0.5
             d[:,2]=((x1-x2)**2 + (y1-y2)**2)**0.5
@@ -398,13 +404,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             gmin=numpy.nanmin(dmax[dmax != numpy.inf])
             gmax=numpy.nanmax(dmax[dmax != numpy.inf])
             print("triangle max lengths: ",gmin,gmax)
-            mask = numpy.logical_or( dmax > 25*gmin, numpy.isnan(dmax))
+            mask = numpy.logical_or( dmax > 270, numpy.isnan(dmax))
             tri.set_mask(mask)
+            
 
-            # Mask off unwanted triangles.
-            #triang.set_mask(np.hypot(x[triang.triangles].mean(axis=1),
-            #                         y[triang.triangles].mean(axis=1))
-            #                < min_radius)
 
         # gouraud shading requires we remove non-visable triangles        
         # gouraud shading seems broken for pdf, be sure to use png
@@ -415,7 +418,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
                 print("using data min/max for colormap, min/max=",vmin,vmax)
             print("using tripcolor")
             pl = ax.tripcolor(tri, datai,vmin=vmin, vmax=vmax,
-                              shading='gouraud',cmap=cmap,antialiased=False)
+                        shading='gouraud',cmap=cmap,antialiased=False)
         elif contour_opt=='la':
             print("contour lines + area fill")
             pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
@@ -432,46 +435,6 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         #ax.triplot(tri,'g-',lw=.1) # plot triangles for debugging
         # as with above, we could put in options for tricontour & tricontourf
         #
-    else:
-        # old code, should be replaced by above version
-        print("MPL plot using gll subcell triangulation")
-        # latlon->cartesian->local coords. this will put any seams at plot boundaries
-        proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
-        x3d = proj3d.transform_points(dataproj,lon[:],lat[:])
-        tcoords = plotproj.transform_points(proj3d,x3d[:,0],x3d[:,1],x3d[:,2])
-
-        # better approach: see ../polycollection/plotpoly_mpl.py
-        # for lat/lon & robin, look for cut cells, fix them to +180, and duplicate at -180
-        # for other projections, just mask out points with numpy.isfinite=False
-        # no need to project to 3D first
-        #
-
-        #Remove bad triangles:
-        x0=tcoords[tri[:,0],0]
-        y0=tcoords[tri[:,0],1]
-        x1=tcoords[tri[:,1],0]
-        y1=tcoords[tri[:,1],1]
-        x2=tcoords[tri[:,2],0]
-        y2=tcoords[tri[:,2],1]
-        d=numpy.empty(tri.shape)
-        d[:,0]=((x0-x1)**2 + (y0-y1)**2)**0.5
-        d[:,1]=((x0-x2)**2 + (y0-y2)**2)**0.5
-        d[:,2]=((x1-x2)**2 + (y1-y2)**2)**0.5
-        dmax=numpy.amax(d,axis=1)
-        gmin=numpy.nanmin(dmax[dmax != numpy.inf])
-        gmax=numpy.nanmax(dmax[dmax != numpy.inf])
-        print("triangle max lengths: ",gmin,gmax)
-        mask = numpy.logical_or( dmax > 25*gmin, numpy.isnan(dmax))
-        # gouraud shading requires we remove non-visable triangles
-        pl = ax.tripcolor(tcoords[:,0],tcoords[:,1],tri,data2d,vmin=vmin,vmax=vmax,
-                          mask=mask,shading='gouraud',cmap=cmap)
-        # plot some of the triangles to make sure they are ok:
-        #ax.triplot(tcoords[:,0],tcoords[:,1],tri[1:100,:],'go-')
-
-        # if we specify the trianglization "tri", then can also give data per vertex or per face
-        # for per-face data, might need facecolors=zfaces option.  but for facedata, probably 
-        # faster to just use the above polycollection, which should be identical
-        # HOWEVER: tripcolor+facecolors may avoid the edge effects with Polycollection + transparancey
 
     pl.set_clim([vmin,vmax])
     if units=="":
