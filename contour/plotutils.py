@@ -381,6 +381,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             # Note that this is different then the polycollection above,
             # and the gll subcell triangles below, because this triangulation
             # will not contain any cut cells, or non-visable cells
+            # but this makes it difficult to fill gaps around the grid 
+            # edge in lat/lon plots since we cant duplicate edge polygons
             tri=mpltri.Triangulation(tc[:,0],tc[:,1])
             mask=None
         else:
