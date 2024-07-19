@@ -424,7 +424,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         elif contour_opt=='la':
             print("contour lines + area fill")
             pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
-            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax, 
+            pl2 = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax, 
                                 colors='k',linewidths=.5)
         elif contour_opt=='lo':
             print("contour lines only")
@@ -447,7 +447,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
     cb = pyplot.colorbar(pl, orientation='horizontal', 
                         label=label,shrink=0.75, pad=0.1)
     # add in contour lines to the color bar:
-    #if pl2!=None: cb.add_lines(pl2)
+    if pl2!=None: cb.add_lines(pl2)
 
     # Plot GLL nodes for perspective
     #pl = ax.plot(lon, lat, 'k.', projection=dataproj, markersize=1)
