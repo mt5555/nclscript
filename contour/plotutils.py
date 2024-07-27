@@ -52,7 +52,7 @@ def myargs(argv):
     se_file = ''
     varname = ''
     contour_opt = ''
-    use_ngl = True
+    use_ngl = False
     timeindex = None
     levindex = None
     pressurelev = None
@@ -236,6 +236,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-180, 0, -30, 75],crs=dataproj)
+    elif proj=="US2":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-135, -50, 10, 50],crs=dataproj)
     elif proj=="andes":
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
@@ -448,6 +452,12 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
                         label=label,shrink=0.75, pad=0.1)
     # add in contour lines to the color bar:
     if pl2!=None: cb.add_lines(pl2)
+
+    if coutlines==1:
+        ax.coastlines(resolution='110m')
+    #gl=ax.gridlines(linewidth=0.2,alpha=0.5)
+    #gl.left_labels = True
+    #gl.bottom_labels = True
 
     # Plot GLL nodes for perspective
     #pl = ax.plot(lon, lat, 'k.', projection=dataproj, markersize=1)
