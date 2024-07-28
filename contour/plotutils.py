@@ -240,6 +240,11 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-135, -50, 10, 50],crs=dataproj)
+    elif proj == "baroclinic":
+        plotproj=crs.PlateCarree(central_longitude=100.0)
+        ax = pyplot.axes(projection=plotproj)
+        #ax.set_extent([25, 175, 25, 75],crs=dataproj)
+        ax.set_extent([-270, -90, 0, 90],crs=crs.PlateCarree())
     elif proj=="andes":
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
