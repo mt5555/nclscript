@@ -265,6 +265,38 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([60, 100, 10, 50],crs=dataproj)
+    elif proj == "namerica1":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        lonW = -150
+        lonE = -40
+        latS = 0
+        latN = 70
+        ax.set_extent([lonW, lonE, latS, latN])
+    elif proj == "namerica2":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        lonW = -127
+        lonE = -112
+        latS = 30
+        latN = 43
+        ax.set_extent([lonW, lonE, latS, latN])
+    elif proj == "namerica3":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        lonW = -123.5
+        lonE = -120.5
+        latS = 39
+        latN = 36.5
+        ax.set_extent([lonW, lonE, latS, latN])
+    elif proj == "namerica4":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        lonW = -123.0
+        lonE = -121.0
+        latS = 38.25
+        latN = 37.25
+        ax.set_extent([lonW, lonE, latS, latN])
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
