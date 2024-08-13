@@ -405,8 +405,8 @@ for t in range(t1,t2):
     elif (timedim):
         print(t+1,"time=",times[t]," time & space dimensions only")
         dimname=dataf.dimensions
-
-        data2d=numpy.squeeze(dataf[t,...],0)
+        #data2d=numpy.squeeze(dataf[t,...],0)
+        data2d=dataf[t,...]
         if compute_prect:
             data2d=data2d + PRECC[t,...]
             longname="PRECT"
