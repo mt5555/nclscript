@@ -17,9 +17,9 @@
 #     holoviews/bokeh/html                             1799s
 #
 #  plotting ne1024pg2 polygons (Needs ~55GB of memory)
-#     holoviews (matplotlib extension)                   114s
-#     hvplot (matplotlib backend):                       112s
-#     matplotlib's polycollection:                       138s
+#     holoviews (matplotlib extension)                   103s
+#     hvplot (matplotlib backend):                        98s
+#     matplotlib's polycollection:                       134s
 #     holoviews (bokeh extension/firefox renderer):      122s
 #
 #
