@@ -75,7 +75,7 @@ def myargs(argv):
         print (name,' -j inputfile2')
         print (name,' -k levindex starting at 1  [default: 3*nlev/4]')
         print (name,' -m map projeciton:  latlon,US1,oro,andes,hamalaya,etc...')
-        print (name,' -o 0,1  continential outlines 1=on/0=off')
+        print (name,' -o 0,1,2,3  continential outlines 0=off, 1=110m, 2=50m, 3=10m')
         print (name,' -p pressure(mb)  interpolate to pressure level')
         print (name,' -r 180x360  remap to lat/lon uni grid')
         print (name,' -r 181x360  remap to lat/lon cap grid')
@@ -492,6 +492,11 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
 
     if coutlines==1:
         ax.coastlines(resolution='110m')
+    if coutlines==2:
+        ax.coastlines(resolution='50m')
+    if coutlines==3:
+        ax.coastlines(resolution='10m')
+        
     #gl=ax.gridlines(linewidth=0.2,alpha=0.5)
     #gl.left_labels = True
     #gl.bottom_labels = True
