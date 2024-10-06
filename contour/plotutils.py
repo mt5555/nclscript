@@ -112,6 +112,7 @@ def myargs(argv):
             projection=arg
         elif opt in ("-y"):
             if arg == "mpl": use_ngl=False
+            if arg == "ngl": use_ngl=True
         elif opt in ("-s"):
             scripfile = arg
         elif opt in ("-g"):

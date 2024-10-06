@@ -28,10 +28,8 @@ scale=None
 units=""
 longname=""
 print('file=',inname)
-print('contour:',var1,'proj=',proj)
+print('contour:',var1,'proj=',proj,'clev=',clev)
 infile = Dataset(inname,"r")
-outname=inname.split(".nc")[0] + "."+var1
-
 
 
 ################################################################
@@ -50,6 +48,9 @@ if var1=="Th":
 if var1=="div":
     ybnds=[0,1000]
     xbnds=[-.0008,.0004]
+if var1=="T":
+    ybnds=[0,1000]
+    xbnds=[110,300]
 
 ################################################################
 # custom contour levels for certain varaiables
@@ -301,6 +302,21 @@ if plev != None:
     print("Interpolating to pressure level = ",plev,"using",PSname)
 
 
+
+###########################################
+# construct output name
+###########################################
+outname=inname.split(".nc")[0]
+if proj != 'latlon':
+    outname=outname + "-"+proj
+if timedim and t1!=0:
+    outname=outname + "-t"+str(t1)
+if plev !=None:
+    outname=outname + "-p"+str(plev)
+else:
+    if levdim:
+        outname=outname + "-k"+str(klev)
+outname=outname + "."+var1
     
 
 #wks_type = "pdf"
@@ -321,12 +337,11 @@ if use_ngl:
         cmap=numpy.flip(cmap,0)
 
 
-    if len(clev)==3:
-        if clev[1]==-clev[0]:
-            cmap='MPL_RdYlBu'
-            #cmap="BlueYellowRed"
+    if clev[1]==-clev[0]:
+        cmap='MPL_RdYlBu'
+        #cmap="BlueYellowRed"
 
-    if var1=="ps" and len(clev)==3:
+    if var1=="ps":
         # custom colormap with center at 1000mb
         cmap = ngl_read_colormap("MPL_RdYlBu")
         n=cmap.shape
@@ -349,12 +364,12 @@ else:
     #cmap='nipy_spectral'
     #cmap='viridis'
     cmap='plasma'
-    if len(clev)==3:
-        if clev[1]==-clev[0]:
-            cmap='Spectral'     # good diverging colormap
-            #cmap='RdYlBu'     # good diverging colormap
-    if var1=="ps" and len(clev)==3:
+    if clev[1]==-clev[0]:
+        cmap='Spectral'     # good diverging colormap
+        #cmap='RdYlBu'     # good diverging colormap
+    if var1=="ps":
         cmap='RdYlBu'
+
 
 for t in range(t1,t2):
 
@@ -515,12 +530,23 @@ for t in range(t1,t2):
     #
     if levdim and nlev_data>1 and have_ps and use_ngl:
         # data2d[min_i1] will give value for either 1D or 2D data
-        min_i1=[183,115]
-        max_i1=[183,112]
+        #min_i1=[183,115]
+        #max_i1=[183,112]
+        #latmin  = lat[min_i1[0]]
+        #lonmin  = lon[min_i1[1]]
+        #latmax  = lat[max_i1[0]]
+        #lonmax  = lon[max_i1[1]]
+        
+        #CA100m grid
+        #min_i1=[2300383]   # point near crash, middle of CA100m grid
+        min_i1=[1137525]   # min T middle of CA100m grid
+        
+        max_i1=[57560]   # random point in pacific
         latmin  = lat[min_i1[0]]
-        lonmin  = lon[min_i1[1]]
+        lonmin  = lon[min_i1[0]]
         latmax  = lat[max_i1[0]]
-        lonmax  = lon[max_i1[1]]
+        lonmax  = lon[max_i1[0]]
+        
         print("vert profile1 at ",min_i1,"lon=",lonmin,'lat=',latmin)
         print("vert profile2 at ",max_i1,"lon=",lonmax,'lat=',latmax)
 
@@ -542,6 +568,8 @@ for t in range(t1,t2):
                     coldata=dataf[:,idx[0],idx[1]]
                 else:
                     coldata=dataf[:,idx[0]]
+            print("timedim, levdim",timedim,levdim)
+            print("coldata",coldata)
             if scale:
                 coldata=coldata*scale
 
@@ -582,7 +610,8 @@ for t in range(t1,t2):
                 p_all[:,icols]=p
                 icols=icols+1
 
-        kstart=int(nlev/3)
+        #kstart=int(nlev/3)
+        kstart=0
         ngl_vertprofile(wks_v,coldata_all[kstart:,...],p_all[kstart:,...],xbnds,ybnds,longname,units,times[t])
 
     
