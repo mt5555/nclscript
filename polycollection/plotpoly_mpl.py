@@ -87,13 +87,10 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     fig=matplotlib.pyplot.figure()
     ax = matplotlib.pyplot.axes(projection=proj)
     ax.set_global()
-    ax.add_feature(cartopy.feature.OCEAN, zorder=0)
-        
-    if not np.isscalar(alpha):    
-        #ax.coastlines(resolution='110m')
-        ax.add_feature(cartopy.feature.OCEAN, zorder=0)
-        #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
-        ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='none')
+    #ax.coastlines(resolution='110m')
+    #ax.add_feature(cartopy.feature.OCEAN, zorder=0)
+    #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
+    #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='none')
 
 #    p = matplotlib.collections.PolyCollection(corners, array=data,
 #         edgecolor='face',linewidths=0,antialiased=False)
@@ -108,6 +105,8 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         p.set_alpha(alpha)
     ax.add_collection(p)
 
+    # add contenental outlines in black
+    ax.coastlines(resolution='110m') # options: '110m', '50m', '10m'    
     
     fig.colorbar(p)
     

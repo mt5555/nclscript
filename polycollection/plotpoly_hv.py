@@ -5,6 +5,9 @@ import pyarrow as pa
 import sys
 import spatialpandas
 import cartopy.crs as ccrs
+import cartopy.feature as cf
+
+from PIL import Image   # needed to load JPG background image
 
 import geoviews as gv
 import geoviews.feature as gf
@@ -105,6 +108,7 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     print(f"plotpoly(): {len(data)} cells. data min/max= {mn:.3},{mx:.3} {title}")
     if clim == None:
         clim=(mn,mx)
+    print(f"clim = ({clim[0]:.3},{clim[1]:.3})")
     if colormap==None:
         if mn*mx < 0: colormap='Spectral'
         else: colormap='plasma'
@@ -158,15 +162,39 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     rasterized.opts(title=title)
     rasterized.opts(xlabel='', ylabel='', clabel='')
 
-    
+
     #background = gv.Overlay([gf.coastline,gf.ocean,gf.land])
     #r = background * rasterized
-    r = gf.ocean * gf.land * rasterized
+    
+
+    #https://www.color-hex.com/color-palette/1021516  ocean: #004589  land: #72601b 
+    # blue from 2012 ANL video:  rgb(48 62 141) = #303E8D   nice blue
+    # blue from me:  #01013f                                dark blue
+    # blue from world iamge      rgb(2  5  20) =#020514     almost black
+    # background = gf.ocean.opts(facecolor='#01013f') * gf.land.opts(facecolor='#958258') 
+
+    #background: image
+    Image.MAX_IMAGE_PIXELS = 233280000
+    image_path = 'world.topo.200408.3x5400x2700.png'
+    #image_path = 'world.topo.200408.3x21600x10800.png'
+    print(f"background={image_path}")
+    img_data = np.flipud( np.array(Image.open(image_path)) )
+    bounds = (-180, -90, 180, 90)  # Assuming the image covers the whole globe
+    background=gv.RGB((np.linspace(-180, 180, img_data.shape[1]),
+                 np.linspace(-90, 90, img_data.shape[0]),
+                 img_data[..., 0], img_data[..., 1], img_data[..., 2]),
+                  bounds=bounds,crs=ccrs.PlateCarree()).opts(projection=proj)
+ 
+    
+    r = background * rasterized    
     r.opts(fig_inches=width/72)   
     r.opts(data_aspect=1)
     #r.opts(fig_size=100)  # scaling factor
-        
+
+    print("gv rendering...")
     fig=gv.render(r)
+    
     if (filepath!=None):
+        print(f"writing: {filepath}")
         fig.savefig(filepath, bbox_inches='tight')
 

@@ -18,7 +18,7 @@ from nglutils import  ngl_plot, ngl_open, ngl_end, ngl_read_colormap, \
 
 
 inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl, \
-scrip_file,gll_file,se_file,contour_opt,coutlines \
+scrip_file,gll_file,se_file,contour_opt,coutlines,user_dpi \
     = myargs(os.sys.argv)
 
 var1 = varnames[0]
@@ -27,7 +27,7 @@ var2_read=None
 scale=None
 units=""
 longname=""
-print('file=',inname)
+#print('file=',inname)
 print('contour:',var1,'proj=',proj,'clev=',clev)
 infile = Dataset(inname,"r")
 
@@ -265,6 +265,19 @@ else:
     hyai=None
     hybi=None
 
+################################################################
+# ncol vars
+################################################################
+ncol=0
+ncol_d=0
+if "ncol" in dataf.dimensions:
+    ncol=infile.dimensions["ncol"].size
+if "ncol_d" in dataf.dimensions:
+    ncol=infile.dimensions["ncol_d"].size
+
+
+
+    
 
 ################################################################
 # get correct PS variable
@@ -337,7 +350,7 @@ if use_ngl:
         cmap=numpy.flip(cmap,0)
 
 
-    if clev[1]==-clev[0]:
+    if len(clev)>=2 and clev[1]==-clev[0]:
         cmap='MPL_RdYlBu'
         #cmap="BlueYellowRed"
 
@@ -360,11 +373,11 @@ if use_ngl:
 
 else:
     outname=outname+"."+wks_type
-    print("MPL output file: ",outname)
+    print("MPL output file: ",outname," dpi=",user_dpi)
     #cmap='nipy_spectral'
     #cmap='viridis'
     cmap='plasma'
-    if clev[1]==-clev[0]:
+    if len(clev)>=2 and clev[1]==-clev[0]:
         cmap='Spectral'     # good diverging colormap
         #cmap='RdYlBu'     # good diverging colormap
     if var1=="ps":
@@ -508,7 +521,7 @@ for t in range(t1,t2):
                 print("calling mpl_plot")
                 mpl_plot(data_i,lon_i,lat_i,title,longname,units,
                          proj,clev,cmap,scrip_file,gll_file,contour_opt,coutlines)
-            pyplot.savefig(outname,dpi=300,orientation="portrait")
+            pyplot.savefig(outname,dpi=user_dpi,orientation="portrait")
             pyplot.close()
     elif use_ngl:
         ngl_plot(wks,data2d,lon,lat,title,longname_t,units,
@@ -521,12 +534,13 @@ for t in range(t1,t2):
             mpl_plot(data2d,lon,lat,title,longname,units,
                      proj,clev,cmap,scrip_file,gll_file,contour_opt,coutlines)
         #pyplot.show()
-        pyplot.savefig(outname,dpi=300,orientation="portrait")
+        pyplot.savefig(outname,dpi=user_dpi,orientation="portrait")
         pyplot.close()
 
 
     #
     # 1D vertical profile at a specified point
+    # if not ovewridden below, min_i1, max_i1 will be set based on min/max above
     #
     if levdim and nlev_data>1 and have_ps and use_ngl:
         # data2d[min_i1] will give value for either 1D or 2D data
@@ -537,18 +551,18 @@ for t in range(t1,t2):
         #latmax  = lat[max_i1[0]]
         #lonmax  = lon[max_i1[1]]
         
-        #CA100m grid
-        #min_i1=[2300383]   # point near crash, middle of CA100m grid
-        min_i1=[1137525]   # min T middle of CA100m grid
-        
-        max_i1=[57560]   # random point in pacific
-        latmin  = lat[min_i1[0]]
-        lonmin  = lon[min_i1[0]]
-        latmax  = lat[max_i1[0]]
-        lonmax  = lon[max_i1[0]]
-        
-        print("vert profile1 at ",min_i1,"lon=",lonmin,'lat=',latmin)
-        print("vert profile2 at ",max_i1,"lon=",lonmax,'lat=',latmax)
+        #CA100m grid, fix point to allow plotting same column 
+        # if ncol==333324:
+        #     #min_i1=[2300383]   # point near crash, middle of CA100m grid
+        #     min_i1=[1137525]   # min T middle of CA100m grid
+        #     max_i1=[57560]   # random point in pacific
+        #     latmin  = lat[min_i1[0]]
+        #     lonmin  = lon[min_i1[0]]
+        #     latmax  = lat[max_i1[0]]
+        #     lonmax  = lon[max_i1[0]]
+            
+        print("vert min profile at ",min_i1,"lon=",lonmin,'lat=',latmin)
+        print("vert max profile at ",max_i1,"lon=",lonmax,'lat=',latmax)
 
         ncols=len((min_i1,max_i1))
         # add ref profile to plot?

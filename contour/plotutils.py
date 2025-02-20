@@ -61,14 +61,16 @@ def myargs(argv):
     clev = None
     name = argv[0]
     projection='latlon'
+    user_dpi=300
     try:
-        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:e:f:o:")
+        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:e:f:o:d:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
         print (name,' -c cmin,cmax       contour level min,max with 40 levels')
         print (name,' -c cmin,cmax,cinc  contour level min,max,spacing')
         print (name,' -c cmin,cmax,cinc,logbase  log levels, min,max,inc (in log space),base (2 or 10)')
+        print (name,' -d dpi  set dpi for matplotlib png')
         print (name,' -e Exodus.g file for plotting spectral elements')
         print (name,' -f contour fill: area,raster,la (lines+area), lo (lines only)')
         print (name,' -g gll_subcell_file')
@@ -123,10 +125,13 @@ def myargs(argv):
             contour_opt = arg
         elif opt in ("-o"):
             coutlines = int(arg)
+        elif opt in ("-d"):
+            user_dpi = int(arg)
+
 
     print("inputfile=",inputfile)
     return inputfile,inputfile2,args,projection,timeindex,levindex,pressurelev,clev,\
-        nlatlon_interp,use_ngl,scripfile,gllfile,se_file,contour_opt,coutlines
+        nlatlon_interp,use_ngl,scripfile,gllfile,se_file,contour_opt,coutlines,user_dpi
 
 
 def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
@@ -218,6 +223,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         vmax=clev[1]
         nlevels=int(round( (clev[1]-clev[0])/clev[2] ))
         levels=[vmin+i*clev[2] for i in range(nlevels+1)]
+        print("cmap=",cmap)
         print("levels=",levels)
     #elif len(clev)==4:
     #not all MPL plotting options support list of levels
@@ -402,6 +408,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         # due to some issue with how alpha is applied (or not applied) at edges
         p = PolyCollection(corners,array=datai,edgecolor='none',linewidths=0,antialiased=False)
         p.set_clim([vmin,vmax])
+        p.set_cmap(cmap)
         pl=ax.add_collection(p)
 
     elif True:
