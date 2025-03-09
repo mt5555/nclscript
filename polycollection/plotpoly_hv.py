@@ -7,11 +7,9 @@ import spatialpandas
 import cartopy.crs as ccrs
 import cartopy.feature as cf
 
-from PIL import Image   # needed to load JPG background image
-
 import geoviews as gv
 import geoviews.feature as gf
-from holoviews.operation.datashader import datashade,rasterize 
+from holoviews.operation.datashader import datashade,rasterize, regrid
 import time
 
 def shift_anti_meridian_polygons(polygons, eps=40):
@@ -82,7 +80,7 @@ def polygons_to_geodataframe(polygons, data, eps=10):
 def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
               proj=ccrs.PlateCarree(),width=4000, height=1800, 
               xlim=(-180.,180), ylim=(-90.,90.),
-              clim=None,colormap=None,mask=1,alpha=1
+              clim=None,colormap=None,mask=1,alpha=1,background=None
 ):
     if lon_poly_coords.shape != lat_poly_coords.shape:
         print(f"Dimension mismatch between longitude: {lon_poly_coords.shape}, and latitude: {lat_poly_coords.shape}")
@@ -113,7 +111,7 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
         if mn*mx < 0: colormap='Spectral'
         else: colormap='plasma'
 
-
+    print("constructing polygons...")
     # transform into desired coordinate system:
     xpoly  = proj.transform_points(ccrs.PlateCarree(), lon_poly_coords, lat_poly_coords)
     #xpoly  = gv.operation.project(projection=proj, corners)
@@ -154,39 +152,20 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     #r.opts(xlim=(-180.,180))
     #r.opts(ylim=(-90.,90))
 
-
-    rasterized = rasterize(hv_polys,height=height, width=width)
+    print("rasterizing data...")
+    # extend width becauce of colorbar:
+    width2=round(width*1.1)
+    rasterized = rasterize(hv_polys,height=height, width=width2)
     rasterized.opts(cmap=colormap,colorbar=True,colorbar_opts=cbar_opts)
     rasterized.opts(clim=clim)
     rasterized.opts(fontscale=10)
     rasterized.opts(title=title)
     rasterized.opts(xlabel='', ylabel='', clabel='')
 
-
-    #background = gv.Overlay([gf.coastline,gf.ocean,gf.land])
-    #r = background * rasterized
-    
-
-    #https://www.color-hex.com/color-palette/1021516  ocean: #004589  land: #72601b 
-    # blue from 2012 ANL video:  rgb(48 62 141) = #303E8D   nice blue
-    # blue from me:  #01013f                                dark blue
-    # blue from world iamge      rgb(2  5  20) =#020514     almost black
-    # background = gf.ocean.opts(facecolor='#01013f') * gf.land.opts(facecolor='#958258') 
-
-    #background: image
-    Image.MAX_IMAGE_PIXELS = 233280000
-    image_path = 'world.topo.200408.3x5400x2700.png'
-    #image_path = 'world.topo.200408.3x21600x10800.png'
-    print(f"background={image_path}")
-    img_data = np.flipud( np.array(Image.open(image_path)) )
-    bounds = (-180, -90, 180, 90)  # Assuming the image covers the whole globe
-    background=gv.RGB((np.linspace(-180, 180, img_data.shape[1]),
-                 np.linspace(-90, 90, img_data.shape[0]),
-                 img_data[..., 0], img_data[..., 1], img_data[..., 2]),
-                  bounds=bounds,crs=ccrs.PlateCarree()).opts(projection=proj)
- 
-    
-    r = background * rasterized    
+    if background == None:
+        r = rasterized
+    else:
+        r = background * rasterized
     r.opts(fig_inches=width/72)   
     r.opts(data_aspect=1)
     #r.opts(fig_size=100)  # scaling factor
@@ -194,7 +173,8 @@ def plotpoly(lat_poly_coords, lon_poly_coords, data, filepath=None, title='',
     print("gv rendering...")
     fig=gv.render(r)
     
+    
     if (filepath!=None):
-        print(f"writing: {filepath}")
-        fig.savefig(filepath, bbox_inches='tight')
-
+        print(f"writing: {filepath}.png")
+        fig.savefig(f"{filepath}.png", bbox_inches='tight')
+                      

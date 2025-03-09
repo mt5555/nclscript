@@ -32,7 +32,7 @@ def shift_anti_meridian_polygons(polygons, eps=40):
 def plotpoly(xlat,xlon,data,outname=None, title='',
               proj=ccrs.PlateCarree(), dpi=1200,
               xlim=(-180.,180), ylim=(-90.,90.),
-              clim=None,colormap=None,mask=1,alpha=1
+              clim=None,colormap=None,mask=1,colormap_mask=None
 ):
     
     # if mask present, remove masked cells
@@ -66,32 +66,34 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         [xpoly,xpoly_new,mask_new] = shift_anti_meridian_polygons(xpoly)
         corners=np.concatenate((xpoly[:,:,0:2],xpoly_new[:,:,0:2]),axis=0)
         data=np.concatenate((data,data[mask_new]),axis=0)
-        if not np.isscalar(alpha):
-            alpha=np.concatenate((alpha,alpha[mask_new]),axis=0)
     if "proj=robin" in proj.srs:
         # remove all cut polygons
         eps=40*1e5
         mask_keep = np.array(np.max(xpoly[:,:,0], axis=1) - np.min(xpoly[:,:,0], axis=1) < eps)
         corners=xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
-        if not np.isscalar(alpha):
-            alpha=alpha[mask_keep]
     if "proj=ortho" in proj.srs:
         #remove non-visible points:
         mask_keep =  np.all(np.isfinite(xpoly),axis=(1,2))
         corners = xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
-        if not np.isscalar(alpha):
-            alpha=alpha[mask_keep]
-    
-    fig=matplotlib.pyplot.figure()
-    ax = matplotlib.pyplot.axes(projection=proj)
-    ax.set_global()
-    #ax.coastlines(resolution='110m')
-    #ax.add_feature(cartopy.feature.OCEAN, zorder=0)
-    #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
-    #ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='none')
 
+    fig=matplotlib.pyplot.figure()                    #create new figure
+    ax = matplotlib.pyplot.axes(projection=proj)      #add axis to the figure
+    ax.set_global()
+
+    # option zorder=0,1,2... will specfy which layer to draw first
+    #ax.set_facecolor(cfeature.COLORS['water'])
+    ax.set_facecolor('#01013f')
+    #ax.coastlines(resolution='110m')
+    #ax.add_feature(cartopy.feature.OCEAN,facecolor='#01013f', edgecolor='none')
+    #ax.add_feature(cartopy.feature.LAND, edgecolor='black')
+    ax.add_feature(cartopy.feature.LAND, zorder=0,facecolor='#958258', edgecolor='none')
+    #ax.add_feature(cartopy.feature.LAKES, alpha=0.5)
+    ax.add_feature(cartopy.feature.LAKES, zorder=0, facecolor='#01013f', edgecolor='none')
+
+
+    print("creating polycollection")
 #    p = matplotlib.collections.PolyCollection(corners, array=data,
 #         edgecolor='face',linewidths=0,antialiased=False)
 #    p = matplotlib.collections.PolyCollection(corners, array=data,
@@ -101,16 +103,25 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
 
     p.set_clim(clim)
     p.set_cmap(colormap)
-    if not np.isscalar(alpha):
-        p.set_alpha(alpha)
-    ax.add_collection(p)
-
-    # add contenental outlines in black
-    ax.coastlines(resolution='110m') # options: '110m', '50m', '10m'    
-    
-    fig.colorbar(p)
-    
+    fig.colorbar(p,ax=ax)
     ax.set_title(title)
-    if outname != None:
-        matplotlib.pyplot.savefig(outname,dpi=dpi,orientation="portrait",bbox_inches='tight')
+
+    print("output background...")
+    matplotlib.pyplot.savefig(f"{outname}-bg.png",dpi=dpi,orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
+
+
+    print("add polycollection...")
+    ax.add_collection(p)
+    # add contenental outlines in black
+    #ax.coastlines(resolution='110m') # options: '110m', '50m', '10m'    
+    
+    print("output polycollection plot...")
+    matplotlib.pyplot.savefig(f"{outname}.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
+
+    # plot the alpha mask:
+    p.set_cmap(colormap_mask)
+    print("output polycollection - alpha mask...")
+    matplotlib.pyplot.savefig(f"{outname}-mask.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
+    
+    print("done")
     return 0
