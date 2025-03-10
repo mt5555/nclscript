@@ -7,10 +7,9 @@ import numpy as np
 from netCDF4 import Dataset
 import cartopy 
 import cartopy.crs as ccrs
-import matplotlib
-from matplotlib import pyplot
+import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
-from math import pi
+import os
 
 def shift_anti_meridian_polygons(polygons, eps=40):
     #shift polygons that are split on the anti-meridian for visualization
@@ -43,9 +42,9 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         #count = sum(1 for x in mask if x)
 
     # convert to degrees, if necessary
-    if np.max(np.abs(xlat))<1.1*pi:
-        xlat=xlat*180/pi
-        xlon=xlon*180/pi
+    if np.max(np.abs(xlat))<1.1*np.pi:
+        xlat=xlat*180/np.pi
+        xlon=xlon*180/np.pi
         
     mn=float(min(data))
     mx=float(max(data))
@@ -78,8 +77,8 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         corners = xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
 
-    fig=matplotlib.pyplot.figure()                    #create new figure
-    ax = matplotlib.pyplot.axes(projection=proj)      #add axis to the figure
+    fig=plt.figure()                    #create new figure
+    ax = plt.axes(projection=proj)      #add axis to the figure
     ax.set_global()
 
     # option zorder=0,1,2... will specfy which layer to draw first
@@ -94,20 +93,19 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
 
 
     print("creating polycollection")
-#    p = matplotlib.collections.PolyCollection(corners, array=data,
+#    p = PolyCollection(corners, array=data,
 #         edgecolor='face',linewidths=0,antialiased=False)
-#    p = matplotlib.collections.PolyCollection(corners, array=data,
+#    p = PolyCollection(corners, array=data,
 #         edgecolor='face',antialiased=False)
-    p = matplotlib.collections.PolyCollection(corners, array=data,
-         edgecolor='none',linewidths=0,antialiased=False)
+    p = PolyCollection(corners, array=data,edgecolor='none',linewidths=0,antialiased=False)
 
     p.set_clim(clim)
     p.set_cmap(colormap)
-    fig.colorbar(p,ax=ax)
-    ax.set_title(title)
+    #fig.colorbar(p,ax=ax)
+    #ax.set_title(title)
 
     print("output background...")
-    matplotlib.pyplot.savefig(f"{outname}-bg.png",dpi=dpi,orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
+    plt.savefig(f"{outname}-bg.png",dpi=dpi,orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
 
 
     print("add polycollection...")
@@ -116,12 +114,16 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     #ax.coastlines(resolution='110m') # options: '110m', '50m', '10m'    
     
     print("output polycollection plot...")
-    matplotlib.pyplot.savefig(f"{outname}.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
+    plt.savefig(f"{outname}.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
 
     # plot the alpha mask:
     p.set_cmap(colormap_mask)
     print("output polycollection - alpha mask...")
-    matplotlib.pyplot.savefig(f"{outname}-mask.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
-    
+    plt.savefig(f"{outname}-mask.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
+    print("running magick composite...")
+    if 0==os.system(f"magick  {outname}-mask.png -flatten tempmask.png"):
+        os.system(f"magick composite {outname}.png {outname}-bg.png tempmask.png {outname}-composite.png")
+    else:
+        print("Error running magick to composit image and background")
     print("done")
     return 0

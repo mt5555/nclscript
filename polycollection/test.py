@@ -7,8 +7,7 @@ from pathlib import Path
 import pickle
 
 
-import matplotlib
-import matplotlib.pylab
+import matplotlib as mpl
 import geoviews as gv
 import geoviews.feature as gf
 from plotpoly_mpl import plotpoly
@@ -64,7 +63,7 @@ print("time=",dtime)
 pngname = f"{pngname}-{dtime:.2f}"
 #print("nan_count =",np.count_nonzero(np.isnan(var)))
 
-pn=3
+pn=2
 if pn==1:
     proj=ccrs.PlateCarree() ; projname="latlon0"
     wres=2000 ; hres=round(wres/2)   # ne1024/latlon speckling at wres=10k  uggh
@@ -86,34 +85,6 @@ print(proj.srs)
 
 
 
-# adding alpha array with data:
-#  matplotlib:  works, but doesn't apply to cell edges
-#  hv:  ignored by rasterize
-#alpha=np.ones_like(var)
-#alpha[var>150]=.5
-#alpha[var>160]=0
-
- 
-
-
-
-# adding alpha to colormap:
-#  matplotlib:  works, but doesn't apply to cell edges
-#  hv:  works!
-# cmap=matplotlib.pylab.cm.plasma
-# my_cmap = cmap(np.arange(cmap.N))
-# # add transparency:
-# my_cmap[:,-1] = np.linspace(0, 1, cmap.N)
-# my_cmap[0:round(cmap.N/4),-1] = 0
-# my_cmap[round(cmap.N/4):round(cmap.N/2),-1]=0.5
-# my_cmap = matplotlib.colors.ListedColormap(my_cmap)
-
-# Create the custom colormap
-#cmap = matplotlib.pyplot.get_cmap("Greys_r")(np.linspace(0, 1, 256))
-#cmap = cmap[40:]
-#cmap[:int(len(cmap)/4), 3] = np.linspace(0, 1, int(len(cmap)/4))
-#my_cmap = matplotlib.colors.ListedColormap(cmap)
-
 # create 3 colormaps:
 #    my_cmap         =  standard, without transparency
 #    my_cmap_alpha   =  colormap with alpha channel
@@ -121,8 +92,8 @@ print(proj.srs)
 #
 if varname=="SW":
     clim=(-1.,900.)
-    cmap = matplotlib.pyplot.get_cmap("Greys_r")(np.linspace(0, 1, 256))
-    my_cmap = matplotlib.colors.ListedColormap(cmap)
+    cmap = mpl.pyplot.get_cmap("Greys_r")(np.linspace(0, 1, 256))
+    my_cmap = mpl.colors.ListedColormap(cmap)
 
     # 100% white, with transparancy
     cmap=cmap.copy()  #  make a new copy otherwise we change my_cmap
@@ -131,19 +102,19 @@ if varname=="SW":
     cmap[:, 3] = alpha
     #cmap[0,0:3]=0  # black
     #cmap[0,3:4]=0.70  # dark
-    my_cmap_alpha = matplotlib.colors.ListedColormap(cmap)
+    my_cmap_alpha = mpl.colors.ListedColormap(cmap)
 
 
 # GOOD SETTINGS FOR TMQ:
 if varname=="Preciptable Water":
     clim=(0.,90.)
-    cmap = matplotlib.pyplot.get_cmap("RdBu_r")(np.linspace(0.1, .95, 256))
-    my_cmap = matplotlib.colors.ListedColormap(cmap)   # make sure to use values, not reference
+    cmap = mpl.pyplot.get_cmap("RdBu_r")(np.linspace(0.1, .95, 256))
+    my_cmap = mpl.colors.ListedColormap(cmap)   # make sure to use values, not reference
 
     cmap=cmap.copy()  #  make a new copy otherwise we change my_cmap
     opaque=round(.55*my_cmap.N)
     cmap[0:opaque, 3] = np.linspace(0, 1, opaque)
-    my_cmap_alpha = matplotlib.colors.ListedColormap(cmap)
+    my_cmap_alpha = mpl.colors.ListedColormap(cmap)
     alpha=cmap[:,3]
 
 
@@ -154,7 +125,7 @@ cmap[:,0]=alpha
 cmap[:,1]=alpha
 cmap[:,2]=alpha
 cmap[:,3]=1
-my_cmap_mask = matplotlib.colors.ListedColormap(cmap,'mt3')
+my_cmap_mask = mpl.colors.ListedColormap(cmap,'mt3')
 
 
 
