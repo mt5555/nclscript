@@ -28,7 +28,7 @@ from PIL import Image   # needed to load JPG background image
 #name="/Users/mt/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
 
 #name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
-#dname="/home/ac.mtaylor/scratch1/viz/1994/output.scream.decadal.6hourlyINST_ne30pg2.INSTANT.nhours_x6.1994-10-26-21600.nc"
+#dname="/home/ac.mtaylor/scratch1/viz/1995-decadal/ne30-all.nc"
 
 name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-20-03600.nc"
@@ -38,8 +38,8 @@ dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/output.scream.decadal.1hourlyIN
 print(f"input: {dname}")
 file1 = Dataset(name,"r")
 ncols = file1.dimensions["grid_size"].size
-#clat1 = file1.variables["grid_center_lat"][:]
-#clon1 = file1.variables["grid_center_lon"][:]
+clat = file1.variables["grid_center_lat"][:]
+clon = file1.variables["grid_center_lon"][:]
 xlat = file1.variables["grid_corner_lat"][:,:]
 xlon = file1.variables["grid_corner_lon"][:,:]
 
@@ -66,19 +66,20 @@ pngname = f"{pngname}-{dtime:.2f}"
 pn=2
 if pn==1:
     proj=ccrs.PlateCarree() ; projname="latlon0"
-    wres=2000 ; hres=round(wres/2)   # ne1024/latlon speckling at wres=10k  uggh
-    dpi=1200                         # used by matplotlib version
+    wres=2000 ; hres=round(wres/2)   
+    dpi=1600 
 if pn==2:
     proj=ccrs.Robinson()   ; projname="robinson0"
     wres=10000 ; hres=round(wres/2)
-    dpi=1200
+    dpi=1600    # mpl image: 8K x 4K     (NE1024: 8k pts on equator)
+    #dpi=2000   # mpl image: 8K x 4K     (NE1024: 8k pts on equator)
 if pn==3:
-    clat=30.; clon=-60.;
-    clon = 180. - np.mod(dtime,1)*360.   # follow the sun
-    proj = ccrs.Orthographic(central_latitude=clat, central_longitude=clon)
+    plat=30.; plon=-60.;
+    plon = 180. - np.mod(dtime,1)*360.   # follow the sun
+    proj = ccrs.Orthographic(central_latitude=plat, central_longitude=plon)
     projname=f"ortho_{clat:.0f}_{clon:.0f}"
     wres=2000 ; hres=wres    # ne1024/ortho needs wres>2000 to avoid speckling
-    dpi=1200
+    dpi=1200                 # ne1024  4K pts visable, should for 4K x 4K image
 
 print(proj.srs)
 
@@ -133,8 +134,10 @@ my_cmap_mask = mpl.colors.ListedColormap(cmap,'mt3')
 #  MPL plot
 #
 if True:
+    background = mpl.image.imread('world.topo.200408.3x21600x10800.png')
     t1= time.time()
-    plotpoly(xlat,xlon,var,pngname,title=varname,proj=proj,colormap=my_cmap,colormap_mask=my_cmap_mask,clim=clim,dpi=dpi)
+    plotpoly(xlat,xlon,var,clat,clon,pngname,title=varname,proj=proj,colormap=my_cmap,colormap_mask=my_cmap_mask,
+             clim=clim,dpi=dpi,background=background)
     t2= time.time()
     print(f"mpl polycollection: {t2-t1:.2f}s")
     exit(0)

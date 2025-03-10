@@ -9,6 +9,7 @@ import cartopy
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
+from scipy.interpolate import RegularGridInterpolator,interpn
 import os
 
 def shift_anti_meridian_polygons(polygons, eps=40):
@@ -28,11 +29,13 @@ def shift_anti_meridian_polygons(polygons, eps=40):
 
 
 
-def plotpoly(xlat,xlon,data,outname=None, title='',
-              proj=ccrs.PlateCarree(), dpi=1200,
-              xlim=(-180.,180), ylim=(-90.,90.),
-              clim=None,colormap=None,mask=1,colormap_mask=None
+def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
+             proj=ccrs.PlateCarree(), dpi=1200,
+             xlim=(-180.,180), ylim=(-90.,90.),
+             clim=None,colormap=None,mask=1,colormap_mask=None,
+             background=None, interp_bg=True
 ):
+
     
     # if mask present, remove masked cells
     if not np.isscalar(mask):
@@ -49,13 +52,12 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     mn=float(min(data))
     mx=float(max(data))
     print(f"plotpoly(): {len(data)} cells. data min/max= {mn:.3},{mx:.3} {title}")
-    if clim == None:
+    if clim is None:
         clim=(mn,mx)
-    if colormap==None:
+    if colormap is None:
         if mn*mx < 0: colormap='Spectral'
         else: colormap='plasma'
 
-        
     # transform into desired coordinate system:
     xpoly  = proj.transform_points(ccrs.PlateCarree(), xlon, xlat)
 
@@ -77,26 +79,28 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
         corners = xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
 
-    fig=plt.figure()                    #create new figure
+    fig=plt.figure(dpi=dpi)                    #create new figure
     ax = plt.axes(projection=proj)      #add axis to the figure
     ax.set_global()
 
-    # option zorder=0,1,2... will specfy which layer to draw first
-    #ax.set_facecolor(cfeature.COLORS['water'])
-    ax.set_facecolor('#01013f')
-    #ax.coastlines(resolution='110m')
-    #ax.add_feature(cartopy.feature.OCEAN,facecolor='#01013f', edgecolor='none')
-    #ax.add_feature(cartopy.feature.LAND, edgecolor='black')
-    ax.add_feature(cartopy.feature.LAND, zorder=0,facecolor='#958258', edgecolor='none')
-    #ax.add_feature(cartopy.feature.LAKES, alpha=0.5)
-    ax.add_feature(cartopy.feature.LAKES, zorder=0, facecolor='#01013f', edgecolor='none')
-
-
+    if background is None:
+        # option zorder=0,1,2... will specfy which layer to draw first
+        #ax.set_facecolor(cfeature.COLORS['water'])
+        ax.set_facecolor('#01013f')
+        #ax.coastlines(resolution='110m')
+        #ax.add_feature(cartopy.feature.OCEAN,facecolor='#01013f', edgecolor='none')
+        #ax.add_feature(cartopy.feature.LAND, edgecolor='black')
+        ax.add_feature(cartopy.feature.LAND, zorder=0,facecolor='#958258', edgecolor='none')
+        #ax.add_feature(cartopy.feature.LAKES, alpha=0.5)
+        ax.add_feature(cartopy.feature.LAKES, zorder=0, facecolor='#01013f', edgecolor='none')
+    else:
+        if not interp_bg:
+            ax.imshow(background, extent=[-180, 180, -90, 90], origin='upper', transform=ccrs.PlateCarree())
+            
+    
     print("creating polycollection")
-#    p = PolyCollection(corners, array=data,
-#         edgecolor='face',linewidths=0,antialiased=False)
-#    p = PolyCollection(corners, array=data,
-#         edgecolor='face',antialiased=False)
+#    p = PolyCollection(corners, array=data,edgecolor='face',linewidths=0,antialiased=False)
+#    p = PolyCollection(corners, array=data,edgecolor='face',antialiased=False)
     p = PolyCollection(corners, array=data,edgecolor='none',linewidths=0,antialiased=False)
 
     p.set_clim(clim)
@@ -104,22 +108,42 @@ def plotpoly(xlat,xlon,data,outname=None, title='',
     #fig.colorbar(p,ax=ax)
     #ax.set_title(title)
 
-    print("output background...")
-    plt.savefig(f"{outname}-bg.png",dpi=dpi,orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
+    if not interp_bg:
+        print("output background...")
+        plt.savefig(f"{outname}-bg.png",dpi='figure',orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
 
-
+        
     print("add polycollection...")
     ax.add_collection(p)
     # add contenental outlines in black
     #ax.coastlines(resolution='110m') # options: '110m', '50m', '10m'    
     
     print("output polycollection plot...")
-    plt.savefig(f"{outname}.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
+    plt.savefig(f"{outname}.png",dpi='figure',orientation="portrait",bbox_inches='tight')
 
+    
     # plot the alpha mask:
     p.set_cmap(colormap_mask)
     print("output polycollection - alpha mask...")
-    plt.savefig(f"{outname}-mask.png",dpi=dpi,orientation="portrait",bbox_inches='tight')
+    plt.savefig(f"{outname}-mask.png",dpi='figure',orientation="portrait",bbox_inches='tight')
+
+    if interp_bg:
+        # pass in xc,yc into here, mask out above
+        # interpolate "background" to "rgb"  with coords  linspace() -> xc,yc
+        imglon=np.linspace(-180, 180, background.shape[1])
+        imglat=np.linspace(90, -90, background.shape[0])
+        clon2=clon[mask_keep]
+        clon2[clon2>180] = clon2[ clon2>180] - 360.
+        clat2=clat[mask_keep]
+        rgb = interpn( (imglat,imglon), background,  (clat2,clon2))
+        c=rgb[:,0] ;  rgb[c<0,0]=0 ; rgb[c>1,0]=1
+        c=rgb[:,1] ;  rgb[c<0,1]=0 ; rgb[c>1,1]=1
+        c=rgb[:,2] ;  rgb[c<0,2]=0 ; rgb[c>1,2]=1
+        p.set(array=None,facecolors=rgb)
+        print("output polycollection background...")
+        plt.savefig(f"{outname}-bg.png",dpi='figure',orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
+
+
     print("running magick composite...")
     if 0==os.system(f"magick  {outname}-mask.png -flatten tempmask.png"):
         os.system(f"magick composite {outname}.png {outname}-bg.png tempmask.png {outname}-composite.png")
