@@ -4,37 +4,40 @@ Plotting data with transparency
 **Matplotlib
 ****************************************************
 Polycollection works well and is almost as fast as holoviews, but has
-trouble with alpha at polygon edges, even when one is careful to remove edges.
-If the polygons have an alpha assiged, then key issue from internet I believe is:
-"The problem is that the squares overlap a tiny bit, and they are
-somewhat transparent (you're setting their alpha values != 1) -- so at
-the overlaps, they're less transparent than they should be, and it
-looks like a line."
+trouble with alpha at polygon edges, even when one is careful to
+remove edges.  If the polygons have an alpha assiged, then key issue
+from internet I believe is: "The problem is that the squares overlap a
+tiny bit, and they are somewhat transparent (you're setting their
+alpha values != 1) -- so at the overlaps, they're less transparent
+than they should be, and it looks like a line."
 
-Fix is create (1) image without alpha, (2) image of an alpha mask and (3) background image
-These can all be created with a single plt,ax pair, by calling plt.savefig()
-as we add different elements.  Then as a postprocessing step:
-remove alpha channel from mask (seems to be needed for composite step to work),
-and the composit images:
+Fix is create (1) image without alpha, (2) image of an alpha mask and
+(3) background image These can all be created with a single plt,ax
+pair, by calling plt.savefig() as we add different elements.  Then as
+a postprocessing step: remove alpha channel from mask (seems to be
+needed for composite step to work), and the composit images:
 
 magick mask.png.png   -flatten tempmask.png
 magick composite data.png bg.png tempmask.png   new.png
 
 
-One issue:
-Just like with holowviews, a lat/lon image printed on a different
-projection with imshow seems to be at a fixed, low resolution.
-Resolution is comparable to NE120.  (1000 pts on equator).  
-So for resolutions up to NE120 use imshow ( and use 5400x2700 image).
-For resolutions up to NE512, interpolate low res backgroudn image (5400x2700).
-For NE1024, interpoalte high res background image.
+High res background image: One issue: Just like with holoviews, a
+lat/lon image projected to a different projection (including just
+rotating a lat/lon projection) with imshow seems to be at a fixed, low
+resolution independent of the data size and image dpi. Resolution is
+comparable to NE120. (1000 pts on equator).  So for resolutions up to
+NE120 use imshow (and use 5400x2700 image, no reason to use higher
+resolution image).  Low res 5400x2700 image is like NE675 at the
+equator.  At NE1024, comput time is the same for LR and HR image so
+might as well use HR.
+
+data <= NE120    interp_bg=False (imshow)     5400x2700 image
+data < NE1024    interp_bg=True               5400x2700 image
+data >= NE1024   interp_bg=True               21600x10800 image
 
 
-TODO: turn this on for non-lat/lon projectionis?
-      verify not needed for lat/lon projections
-      verify not needed for NE30 images (backgroudn will be higher resolution than NE30 data?)
-
-
+TODO:
+   find secret parameter that controls internal IMSHOW res when projecting???
 
 
 ****************************************************

@@ -132,9 +132,13 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
         # interpolate "background" to "rgb"  with coords  linspace() -> xc,yc
         imglon=np.linspace(-180, 180, background.shape[1])
         imglat=np.linspace(90, -90, background.shape[0])
-        clon2=clon[mask_keep]
+        if "proj=eqc" in proj.srs:
+            clon2=clon   # mask_keep not computed
+            clat2=clat
+        else:
+            clon2=clon[mask_keep]
+            clat2=clat[mask_keep]
         clon2[clon2>180] = clon2[ clon2>180] - 360.
-        clat2=clat[mask_keep]
         rgb = interpn( (imglat,imglon), background,  (clat2,clon2))
         c=rgb[:,0] ;  rgb[c<0,0]=0 ; rgb[c>1,0]=1
         c=rgb[:,1] ;  rgb[c<0,1]=0 ; rgb[c>1,1]=1
@@ -144,6 +148,7 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
         plt.savefig(f"{outname}-bg.png",dpi='figure',orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
 
 
+    return 0
     print("running magick composite...")
     if 0==os.system(f"magick  {outname}-mask.png -flatten tempmask.png"):
         os.system(f"magick composite {outname}.png {outname}-bg.png tempmask.png {outname}-composite.png")
