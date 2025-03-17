@@ -380,8 +380,12 @@ else:
     if len(clev)>=2 and clev[1]==-clev[0]:
         cmap='Spectral'     # good diverging colormap
         #cmap='RdYlBu'     # good diverging colormap
-    if var1=="ps":
-        cmap='RdYlBu'
+    if var1=="ps" or var1=="qv_2m":
+        cmap='RdYlBu'    
+    if var1=="TMQ" or var1=="VapWaterPath":
+        cmap='RdBu_r
+
+
 
 
 for t in range(t1,t2):
