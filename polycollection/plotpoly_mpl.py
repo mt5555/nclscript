@@ -7,10 +7,10 @@ import numpy as np
 from netCDF4 import Dataset
 import cartopy 
 import cartopy.crs as ccrs
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 from scipy.interpolate import RegularGridInterpolator,interpn
-import os
 
 def shift_anti_meridian_polygons(polygons, eps=40):
     #shift polygons that are split on the anti-meridian for visualization
@@ -33,7 +33,7 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
              proj=ccrs.PlateCarree(), dpi=1200,
              xlim=(-180.,180), ylim=(-90.,90.),
              clim=None,colormap=None,mask=1,colormap_mask=None,
-             background=None, interp_bg=True
+             background='cartopy', interp_bg=False
 ):
 
     
@@ -83,20 +83,27 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
     ax = plt.axes(projection=proj)      #add axis to the figure
     ax.set_global()
 
-    if background is None:
+    # add cartopy background images. needs to be first because it uses facecolor
+    background2=None
+    if background=='cartopy':
+        print("output internal cartopy background")
         # option zorder=0,1,2... will specfy which layer to draw first
         #ax.set_facecolor(cfeature.COLORS['water'])
         ax.set_facecolor('#01013f')
         #ax.coastlines(resolution='110m')
         #ax.add_feature(cartopy.feature.OCEAN,facecolor='#01013f', edgecolor='none')
-        #ax.add_feature(cartopy.feature.LAND, edgecolor='black')
-        ax.add_feature(cartopy.feature.LAND, zorder=0,facecolor='#958258', edgecolor='none')
-        #ax.add_feature(cartopy.feature.LAKES, alpha=0.5)
-        ax.add_feature(cartopy.feature.LAKES, zorder=0, facecolor='#01013f', edgecolor='none')
+        #ax.add_feature(cartopy.feature.LAND,edgecolor='black')
+        ax.add_feature(cartopy.feature.LAND, zorder=0,facecolor='#958258', edgecolor='none', alpha=1)
+        #ax.add_feature(cartopy.feature.LAKES, zorder=100, alpha=0.5)
+        ax.add_feature(cartopy.feature.LAKES, zorder=0, facecolor='#01013f', edgecolor='none',alpha=1)
+        plt.savefig(f"{outname}-bg.png",dpi='figure',orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
+        # go back to white background for low-res gaps from missing polygons
+        ax.set_facecolor('white')
+    
+    elif background=='none':
+        pass
     else:
-        if not interp_bg:
-            ax.imshow(background, extent=[-180, 180, -90, 90], origin='upper', transform=ccrs.PlateCarree())
-            
+        background2 = mpl.image.imread(background)
     
     print("creating polycollection")
 #    p = PolyCollection(corners, array=data,edgecolor='face',linewidths=0,antialiased=False)
@@ -107,10 +114,6 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
     p.set_cmap(colormap)
     #fig.colorbar(p,ax=ax)
     #ax.set_title(title)
-
-    if not interp_bg:
-        print("output background...")
-        plt.savefig(f"{outname}-bg.png",dpi='figure',orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
 
         
     print("add polycollection...")
@@ -127,32 +130,29 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
     print("output polycollection - alpha mask...")
     plt.savefig(f"{outname}-mask.png",dpi='figure',orientation="portrait",bbox_inches='tight')
 
-    if interp_bg:
-        # pass in xc,yc into here, mask out above
-        # interpolate "background" to "rgb"  with coords  linspace() -> xc,yc
-        imglon=np.linspace(-180, 180, background.shape[1])
-        imglat=np.linspace(90, -90, background.shape[0])
-        if "proj=eqc" in proj.srs:
-            clon2=clon   # mask_keep not computed
-            clat2=clat
+
+    if not (background2 is None):
+        if interp_bg:
+            print("output polycollection background...")
+            # pass in xc,yc into here, mask out above
+            # interpolate "background" to "rgb"  with coords  linspace() -> xc,yc
+            imglon=np.linspace(-180, 180, background2.shape[1])
+            imglat=np.linspace(90, -90, background2.shape[0])
+            if "proj=eqc" in proj.srs:
+                clon2=clon   # mask_keep not computed
+                clat2=clat
+            else:
+                clon2=clon[mask_keep]
+                clat2=clat[mask_keep]
+                clon2[clon2>180] = clon2[ clon2>180] - 360.
+            rgb = interpn( (imglat,imglon), background2,  (clat2,clon2))
+            c=rgb[:,0] ;  rgb[c<0,0]=0 ; rgb[c>1,0]=1
+            c=rgb[:,1] ;  rgb[c<0,1]=0 ; rgb[c>1,1]=1
+            c=rgb[:,2] ;  rgb[c<0,2]=0 ; rgb[c>1,2]=1
+            p.set(array=None,facecolors=rgb)
         else:
-            clon2=clon[mask_keep]
-            clat2=clat[mask_keep]
-        clon2[clon2>180] = clon2[ clon2>180] - 360.
-        rgb = interpn( (imglat,imglon), background,  (clat2,clon2))
-        c=rgb[:,0] ;  rgb[c<0,0]=0 ; rgb[c>1,0]=1
-        c=rgb[:,1] ;  rgb[c<0,1]=0 ; rgb[c>1,1]=1
-        c=rgb[:,2] ;  rgb[c<0,2]=0 ; rgb[c>1,2]=1
-        p.set(array=None,facecolors=rgb)
-        print("output polycollection background...")
+            print("output imshow background...")
+            ax.imshow(background2, zorder=100, extent=[-180, 180, -90, 90], origin='upper', transform=ccrs.PlateCarree())
         plt.savefig(f"{outname}-bg.png",dpi='figure',orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
 
 
-    return 0
-    print("running magick composite...")
-    if 0==os.system(f"magick  {outname}-mask.png -flatten tempmask.png"):
-        os.system(f"magick composite {outname}.png {outname}-bg.png tempmask.png {outname}-composite.png")
-    else:
-        print("Error running magick to composit image and background")
-    print("done")
-    return 0

@@ -2,6 +2,7 @@ import numpy as np
 #
 import time
 import sys
+import os
 from netCDF4 import Dataset
 from pathlib import Path
 import pickle
@@ -17,7 +18,14 @@ from PIL import Image   # needed to load JPG background image
 
 
 #
-# For background image:  (see README)
+# notes on background image processing:
+# see README for details and motivation
+#
+# interp_bg = False:  use "imshow" to draw image 
+# interp_bg = True:
+#    MPL: intepolate background image to data polygons
+#    HV:  project background image before plotting (builds new triagnularizaiton, SLOW)
+# 
 # data <= NE120    interp_bg=False (imshow)     5400x2700 image
 # data < NE1024    interp_bg=True               5400x2700 image
 # data >= NE1024   interp_bg=True               21600x10800 image
@@ -38,17 +46,19 @@ from PIL import Image   # needed to load JPG background image
 #name="/Users/mt/scratch1/mapping/grids/ocean.oRRS18to6v3.scrip.181106.nc"
 
 
+# location of backround images and HV pickle files
+bg_path = os.path.expanduser('~/scratch1/viz/bg')
 
-#name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
-#dname="/home/ac.mtaylor/scratch1/viz/1995-decadal/ne30-all.nc"
-#image_path='world.topo.200408.3x5400x2700.png'
-#interp_bg=False  
+name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+dname="/home/ac.mtaylor/scratch1/viz/1995-decadal/ne30-all.nc"
+image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
+interp_bg=False  
 
 
-name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
-dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-20-03600.nc"
-image_path='world.topo.200408.3x21600x10800.png'
-interp_bg=True
+#name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
+#dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-20-03600.nc"
+#image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png'
+#interp_bg=True
 
 
 
@@ -63,26 +73,19 @@ clat = file1.variables["grid_center_lat"][:]
 clon = file1.variables["grid_center_lon"][:]
 xlat = file1.variables["grid_corner_lat"][:,:]
 xlon = file1.variables["grid_corner_lon"][:,:]
-
 #area = file1.variables["grid_area"][:]
 #Rearth_km = 6378.1                # radius of earth, in km
 #var=Rearth_km*np.sqrt(area)
 
 datafile=Dataset(dname,"r")
-#vas = datafile.variables["qv_2m"][0,:]  # first snapshot in file
-
 varname="Preciptable Water"   ;  varnamef="VapWaterPath"  ; pngname='tmq'
 #varname="LW"   ;  varnamef="LW_flux_up_at_model_top"      ; pngname='lw'
 #varname="SW"   ;  varnamef="SW_flux_up_at_model_top"       ; pngname='sw'
 #varname="Vapor (2m)"   ;  varnamef="qv_2m"                ; pngname='qv2m'
 #varname="Precip"   ;  varnamef="precip_total_surf_mass_flux"  ; pngname='prec'
 
-idx=18
-var = datafile.variables[varnamef][idx,:]  # last snapshot in file
-dtime = datafile.variables["time"][idx]  # last snapshot in file
-print("time=",dtime)
-pngname = f"{pngname}-{dtime:.2f}"
-#print("nan_count =",np.count_nonzero(np.isnan(var)))
+dtime_all = datafile.variables["time"][:]  # times
+print("times mix,max=",np.min(dtime_all),np.max(dtime_all))
 
 pn=2
 if pn==1:
@@ -92,12 +95,14 @@ if pn==1:
     if plon==0:
         interp_bg=False
     wres=8000 ; hres=round(wres/2)   
-    dpi=1600 
+    dpi=1600
+    background_is_fixed = True
 if pn==2:
     proj=ccrs.Robinson()   ; projname="robinson0"
     wres=10000 ; hres=round(wres/2)
     dpi=1600    # mpl image: 8K x 4K     (NE1024: 8k pts on equator)
     #dpi=2000   # mpl image: 8K x 4K     (NE1024: 8k pts on equator)
+    background_is_fixed = True    
 if pn==3:
     plat=30.; plon=-60.;
     plon = 180. - np.mod(dtime,1)*360.   # follow the sun
@@ -105,6 +110,7 @@ if pn==3:
     projname=f"ortho_{clat:.0f}_{clon:.0f}"
     wres=2000 ; hres=wres    # ne1024/ortho needs wres>2000 to avoid speckling
     dpi=1200                 # ne1024  4K pts visable, should for 4K x 4K image
+    background_is_fixed = False  # background needs to be recomputed each frame
 
 print(proj.srs)
 
@@ -155,16 +161,51 @@ cmap[:,3]=1
 my_cmap_mask = mpl.colors.ListedColormap(cmap,'mt3')
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 #
 #  MPL plot
 #
-if False:
-    background = mpl.image.imread(image_path)
-    t1= time.time()
-    plotpoly(xlat,xlon,var,clat,clon,pngname,title=varname,proj=proj,colormap=my_cmap,colormap_mask=my_cmap_mask,
-             clim=clim,dpi=dpi,background=background,interp_bg=interp_bg)
-    t2= time.time()
-    print(f"mpl polycollection: {t2-t1:.2f}s")
+
+if True:
+    background = image_path
+    #background = 'cartopy'   #dark blue ocean, brown land
+    interp_bg=True  # testing
+
+    for idx, dtime in enumerate(dtime_all):
+        print("reading data at time=",dtime)
+        var = datafile.variables[varnamef][idx,:]  # last snapshot in file
+        #print("nan_count =",np.count_nonzero(np.isnan(var)))
+        pngname2 = f"{pngname}-{dtime:.2f}"
+
+        t1= time.time()
+        plotpoly(xlat,xlon,var,clat,clon,pngname2,title=varname,proj=proj,colormap=my_cmap,colormap_mask=my_cmap_mask,
+                 clim=clim,dpi=dpi,background=background,interp_bg=interp_bg)
+        t2= time.time()
+        print(f"mpl polycollection: {t2-t1:.2f}s")
+
+        if background != 'none':
+            bg_out_name=f"{pngname2}-bg.png"
+        if background_is_fixed:
+            background = 'none'    # skip recomputing background for future plotpoly()
+
+        
+        print("running magick composite...",bg_out_name)
+        if 0==os.system(f"magick  {pngname2}-mask.png -colorspace Gray -flatten tempmask.png"):
+            os.system(f"magick composite {pngname2}.png {bg_out_name} tempmask.png {pngname2}-composite.png")
+        else:
+            print("Error running magick to composit image and background")
+        
     exit(0)
 
 
@@ -178,7 +219,7 @@ if False:
 gv.extension('matplotlib') # need to load extension before setting options
 bg=1
 if bg==1:
-    projname=f"world-hr-{projname}.pickle"
+    projname=f"{bg_path}/world-hr-{projname}.pickle"
     p=Path(projname)
     if p.exists() and p.is_file():
         print(f"loading background image {p}")
@@ -212,8 +253,14 @@ if bg==3:
     background = gf.ocean.opts(facecolor='#01013f') * gf.land.opts(facecolor='#958258') 
 
 
+idx=-1  # last image in file
+dtime=dtime_all[idx]
+print("reading data at time=",dtime)
+var = datafile.variables[varnamef][idx,:]  
+pngname2 = f"{pngname}-{dtime:.2f}"    
+    
 t1 = time.time()
-plotpoly_hv(xlat,xlon,var,pngname,clim=clim,title=varname,proj=proj,colormap=my_cmap_alpha,width=wres,height=hres,background=background)
+plotpoly_hv(xlat,xlon,var,pngname2,clim=clim,title=varname,proj=proj,colormap=my_cmap_alpha,width=wres,height=hres,background=background)
 t2= time.time()
 print(f"hv polycollection:  {t2-t1:.2f}s")
 
