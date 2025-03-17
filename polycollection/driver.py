@@ -60,7 +60,27 @@ interp_bg=False
 #image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png'
 #interp_bg=True
 
-
+print(len(sys.argv))
+if len(sys.argv)==5:
+    name=sys.argv[1]
+    dname=sys.argv[2]
+    res=sys.argv[3]
+    if res <= 30:   # NE30 up to NE120(27km)
+        interp_bg=False
+        image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
+    elif res < 3:   # < NE1024  (3.25km)
+        interp_bg=True
+        image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
+    else:
+        interp_bg=True
+        image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png"
+elif len(sys.argv)==1:
+    # sent vars by hand above
+    pass    
+else:
+    print('driver.py  scripfile  datafile  resolution_in_km')
+    sys.exit();
+sys.exit()
 
 
 
@@ -180,7 +200,6 @@ my_cmap_mask = mpl.colors.ListedColormap(cmap,'mt3')
 if True:
     background = image_path
     #background = 'cartopy'   #dark blue ocean, brown land
-    interp_bg=True  # testing
 
     for idx, dtime in enumerate(dtime_all):
         print("reading data at time=",dtime)
