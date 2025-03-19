@@ -1,0 +1,33 @@
+#!/bin/bash -i
+#SBATCH --job-name mpl
+#XXSBATCH -p acme-small
+#XXSBATCH --account=condo
+#XXSBATCH -p compute
+#SBATCH -N 1
+#SBATCH --time=48:00:00
+
+#
+#
+#
+# 
+#
+cd ~/scratch1/viz/1995-testb2/png
+conda activate hv   # for ffmpeg
+ 
+#
+# for PNGs, use -framerate not -r
+#
+#
+# 1 day = 24 frames.  12 = 2 seconds per day
+#
+# NE1024 Robinson
+# original 8255 x 4345
+# to test crop arguments:
+#  magick tmq-332.00-composite.png  -crop 7968x4064+150+140 +repage temp.png
+#
+ffmpeg  -framerate  15 -pattern_type glob -i "tmq-*-composite.png" \
+-c:v libx264  -vf crop=7968:4064:150:140,scale="1992:-1" -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
+-r 30   scream-tmq-robinson.mp4
+
+
+

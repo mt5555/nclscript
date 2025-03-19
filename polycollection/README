@@ -17,8 +17,8 @@ pair, by calling plt.savefig() as we add different elements.  Then as
 a postprocessing step: remove alpha channel from mask (seems to be
 needed for composite step to work), and the composit images:
 
-magick mask.png.png -colorspace Gray -flatten tempmask.png
-magick composite data.png bg.png tempmask.png   new.png
+magick mask.png -colorspace Gray -flatten mask2.png
+magick composite data.png bg.png mask2.png   new.png
 
 
 High res background image: One issue: Just like with holoviews, a

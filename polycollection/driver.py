@@ -49,16 +49,18 @@ from PIL import Image   # needed to load JPG background image
 # location of backround images and HV pickle files
 bg_path = os.path.expanduser('~/scratch1/viz/bg')
 
-name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
-dname="/home/ac.mtaylor/scratch1/viz/1995-decadal/ne30-all.nc"
-image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
-interp_bg=False  
+#name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne30pg2.scrip.nc"
+#dname="/home/ac.mtaylor/scratch1/viz/1995-decadal/ne30-all.nc"
+#image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
+#interp_bg=False
+#idx=-1  # last frame
 
 
 #name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
-#dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-20-03600.nc"
+#dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-31-03600.nc"
 #image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png'
 #interp_bg=True
+#idx=-1  # last frame
 
 if len(sys.argv)==4:
     name=sys.argv[1]
@@ -119,8 +121,7 @@ if pn==1:
 if pn==2:
     proj=ccrs.Robinson()   ; projname="robinson0"
     wres=10000 ; hres=round(wres/2)
-    dpi=1600    # mpl image: 8K x 4K     (NE1024: 8k pts on equator)
-    #dpi=2000   # mpl image: 8K x 4K     (NE1024: 8k pts on equator)
+    dpi=1600    # mpl image: 8.3K x 4.3K     (NE1024: 8k pts on equator)
     background_is_fixed = True    
 if pn==3:
     plat=30.; plon=-60.;
