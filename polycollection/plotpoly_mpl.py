@@ -156,3 +156,5 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
         plt.savefig(f"{outname}-bg.png",dpi='figure',orientation="portrait",bbox_inches='tight',facecolor='white', transparent=False)
 
 
+    plt.clf()  # clear figure
+    plt.close(fig) # close figure, release memory

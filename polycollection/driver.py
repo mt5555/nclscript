@@ -60,27 +60,26 @@ interp_bg=False
 #image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png'
 #interp_bg=True
 
-print(len(sys.argv))
-if len(sys.argv)==5:
+if len(sys.argv)==4:
     name=sys.argv[1]
     dname=sys.argv[2]
-    res=sys.argv[3]
-    if res <= 30:   # NE30 up to NE120(27km)
+    res=int(sys.argv[3])
+    if res >= 25:   # resoluiton as fine as NE120(27km)
         interp_bg=False
         image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
-    elif res < 3:   # < NE1024  (3.25km)
+    elif res > 3:   # 120 < NE < 1024
         interp_bg=True
         image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
-    else:
+    else:            # NE1024 and finer
         interp_bg=True
         image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png"
 elif len(sys.argv)==1:
     # sent vars by hand above
     pass    
 else:
+    print('drivery.py requires 3 arguments:')
     print('driver.py  scripfile  datafile  resolution_in_km')
     sys.exit();
-sys.exit()
 
 
 
@@ -202,16 +201,20 @@ if True:
     #background = 'cartopy'   #dark blue ocean, brown land
 
     for idx, dtime in enumerate(dtime_all):
-        print("reading data at time=",dtime)
+        t0= time.time()
+        print("reading data at time=",dtime,flush=True)
         var = datafile.variables[varnamef][idx,:]  # last snapshot in file
         #print("nan_count =",np.count_nonzero(np.isnan(var)))
         pngname2 = f"{pngname}-{dtime:.2f}"
 
         t1= time.time()
+        print(f"data read time: {t1-t0:.2f}s",flush=True)        
+        
         plotpoly(xlat,xlon,var,clat,clon,pngname2,title=varname,proj=proj,colormap=my_cmap,colormap_mask=my_cmap_mask,
                  clim=clim,dpi=dpi,background=background,interp_bg=interp_bg)
+
         t2= time.time()
-        print(f"mpl polycollection: {t2-t1:.2f}s")
+        print(f"mpl polycollection: {t2-t1:.2f}s",flush=True)
 
         if background != 'none':
             bg_out_name=f"{pngname2}-bg.png"
@@ -219,12 +222,16 @@ if True:
             background = 'none'    # skip recomputing background for future plotpoly()
 
         
-        print("running magick composite...",bg_out_name)
-        if 0==os.system(f"magick  {pngname2}-mask.png -colorspace Gray -flatten tempmask.png"):
-            os.system(f"magick composite {pngname2}.png {bg_out_name} tempmask.png {pngname2}-composite.png")
+        print("running magick composite...",bg_out_name,flush=True)
+        if 0==os.system(f"magick  {pngname2}-mask.png -colorspace Gray -flatten {pngname2}-mask2.png"):
+            os.system(f"magick composite {pngname2}.png {bg_out_name} {pngname2}-mask2.png {pngname2}-composite.png")
         else:
             print("Error running magick to composit image and background")
-        
+
+
+        t3= time.time()
+        print(f"magick composit time: {t3-t2:.2f}s",flush=True)        
+
     exit(0)
 
 

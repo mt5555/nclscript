@@ -1,0 +1,68 @@
+#!/bin/bash -i
+#SBATCH --job-name mpl
+#XXSBATCH -p acme-small
+#XXSBATCH --account=condo
+#XXSBATCH -p compute
+#SBATCH -N 1
+#SBATCH --time=48:00:00
+
+#
+# ne1024 plot needs about 18GB (1 image)
+# anvil: 64GB/node
+# chrysalis: 256GB / node
+#
+# time for 24 plots (1 file): 500*24 = 3.3h
+# process 3 files at a time, can do ~18 files in 24h job
+# 
+#
+
+cd ~/scratch1/viz/1995-testb2/png
+
+scrip=~/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc
+#files=`ls ../data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-2*.nc`
+files=( ../data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-*.nc )
+
+conda activate hv
+
+echo $scrip
+res=3    # 3.25 km
+
+i=0
+len=${#files[@]}
+while :; do
+    if [[ 'i+1' -gt $len ]]; then
+        break
+    fi
+    python ~/codes/nclscript/polycollection/driver.py $scrip ${files[i]} $res  &
+    let "i += 1"
+
+    if [[ 'i+1' -gt $len ]]; then
+        break
+    fi
+    python ~/codes/nclscript/polycollection/driver.py $scrip ${files[i]} $res   &
+    let "i += 1"
+
+    if [[ 'i+1' -gt $len ]]; then
+        break
+    fi
+    python ~/codes/nclscript/polycollection/driver.py $scrip ${files[i]} $res   &
+    let "i += 1"
+
+
+    if [[ 'i+1' -gt $len ]]; then
+        break
+    fi
+    python ~/codes/nclscript/polycollection/driver.py $scrip ${files[i]} $res   &
+    let "i += 1"
+
+    
+    echo "end batch"
+    wait    
+done
+
+#for f in $files ; do
+#    echo $f
+#    python ~/codes/nclscript/polycollection/driver.py $scrip $f 3
+#done
+
+
