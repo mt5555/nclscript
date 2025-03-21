@@ -11,9 +11,25 @@
 #
 # 
 #
-cd ~/scratch1/viz/1995-testb2/png
+cd ~/scratch1/viz/1995-testb2
 conda activate hv   # for ffmpeg
- 
+
+
+
+
+for i in {320..410}; do
+    shopt -s nullglob;   # do this so no files will return array of size 0 instead of 1
+    files=( png/*${i}*composite.* )
+    num=${#files[@]}
+    if [[ $num != 24 ]]; then
+        echo day=$i num files=$num  MISSING?
+    fi
+done
+exit 0
+
+
+
+
 #
 # for PNGs, use -framerate not -r
 #
@@ -25,9 +41,11 @@ conda activate hv   # for ffmpeg
 # to test crop arguments:
 #  magick tmq-332.00-composite.png  -crop 7968x4064+150+140 +repage temp.png
 #
-ffmpeg  -framerate  15 -pattern_type glob -i "tmq-*-composite.png" \
+ffmpeg  -framerate 20 -pattern_type glob -i "png/tmq-*-composite.png" \
 -c:v libx264  -vf crop=7968:4064:150:140,scale="1992:-1" -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
 -r 30   scream-tmq-robinson.mp4
 
 
+
+# to interpolate frames: -vf minterpolate=fps=30:mi_mode=mci
 
