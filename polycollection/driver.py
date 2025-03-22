@@ -109,8 +109,9 @@ dtime_all = datafile.variables["time"][:]  # times
 print("times mix,max=",np.min(dtime_all),np.max(dtime_all))
 
 pn=2
+extent=None  # use global, unless specified below
 if pn==1:
-    plon=25
+    plon=0
     proj=ccrs.PlateCarree(central_longitude=plon) ; projname=f"latlon{plon}"
     # if projection exactly matches background image, use imshow, dont interpolate
     if plon==0:
@@ -131,6 +132,11 @@ if pn==3:
     wres=2000 ; hres=wres    # ne1024/ortho needs wres>2000 to avoid speckling
     dpi=1200                 # ne1024  4K pts visable, should for 4K x 4K image
     background_is_fixed = False  # background needs to be recomputed each frame
+if pn==4:  # good for zoomed in over north atlantic
+    plon=-45.;
+    proj=ccrs.LambertConformal(central_longitude=plon,standard_parallels=(20, 45))
+                               #standard_parallels=(33, 45)  # default
+    extent=[plon-50,plon+40,-5,65]
 
 print(proj.srs)
 
@@ -212,7 +218,7 @@ if True:
         print(f"data read time: {t1-t0:.2f}s",flush=True)        
         
         plotpoly(xlat,xlon,var,clat,clon,pngname2,title=varname,proj=proj,colormap=my_cmap,colormap_mask=my_cmap_mask,
-                 clim=clim,dpi=dpi,background=background,interp_bg=interp_bg)
+                 clim=clim,dpi=dpi,background=background,interp_bg=interp_bg,extent=extent)
 
         t2= time.time()
         print(f"mpl polycollection: {t2-t1:.2f}s",flush=True)
