@@ -60,7 +60,7 @@ name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
 dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-31-03600.nc"
 image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png"
 interp_bg=True
-idx=-1  # last frame
+idx=2  # 3rd frame, time=334.125
 
 if len(sys.argv)==4:
     name=sys.argv[1]
@@ -106,14 +106,12 @@ varname="Preciptable Water"   ;  varnamef="VapWaterPath"  ; pngname='tmq'
 #varname="Vapor (2m)"   ;  varnamef="qv_2m"                ; pngname='qv2m'
 #varname="Precip"   ;  varnamef="precip_total_surf_mass_flux"  ; pngname='prec'
 
-if idx is None:
-    dtime_all = datafile.variables["time"][:]  # times
-else:
-    dtime_all = [datafile.variables["time"][idx]]  # times
+dtime_all = datafile.variables["time"][:]  # times
 print("times min,max=",np.min(dtime_all),np.max(dtime_all))
 
-pn=4
+pn=3
 extent=None  # use global, unless specified below
+background_is_fixed = True
 if pn==1:
     plon=0
     proj=ccrs.PlateCarree(central_longitude=plon) ; projname=f"latlon{plon}"
@@ -122,29 +120,27 @@ if pn==1:
         interp_bg=False
     wres=8000 ; hres=round(wres/2)   
     dpi=1600
-    background_is_fixed = True
 if pn==2:
     proj=ccrs.Robinson()   ; projname="robinson0"
     wres=10000 ; hres=round(wres/2)
     dpi=1600    # mpl image: 8.3K x 4.3K     (NE1024: 8k pts on equator)
-    background_is_fixed = True    
 if pn==3:
-    plat=30.; plon=-60.;
-    plon = 180. - np.mod(dtime,1)*360.   # follow the sun
+    plat=28.; plon=-53.;
+    #plon = 180. - np.mod(dtime,1)*360.   # follow the sun
     proj = ccrs.Orthographic(central_latitude=plat, central_longitude=plon)
-    projname=f"ortho_{clat:.0f}_{clon:.0f}"
+    extent=[plon-51.5,plon+51.5,plat-32,plat+32]
+    projname=f"ortho_{plat:.0f}_{plon:.0f}"
     wres=2000 ; hres=wres    # ne1024/ortho needs wres>2000 to avoid speckling
-    dpi=1200                 # ne1024  4K pts visable, should for 4K x 4K image
-    background_is_fixed = False  # background needs to be recomputed each frame
-if pn==4:  # good for zoomed in over north atlantic
+    dpi=1000   #             # ne1024  4K pts visable, should for 4K x 4K image
+if pn==4:  # good for zoomed in over CONUS
     plon=-45.;
     proj=ccrs.LambertConformal(central_longitude=plon,standard_parallels=(20, 45))
                                #standard_parallels=(33, 45)  # default
-    extent=[plon-50,plon+40,-5,65]
+    #v1: extent=[plon-50,plon+40,-5,65]
+    extent=[plon-50,plon+32,5,50]
     projname=f"lcc-na1"
     wres=500 ; hres=wres    # ne1024/ortho needs wres>2000 to avoid speckling
     dpi=400                 # ne1024  4K pts visable, should for 4K x 4K image
-    background_is_fixed = True  # background needs to be recomputed each frame
 
 print(proj.srs)
 
@@ -153,12 +149,12 @@ print(proj.srs)
 
 
 # create 3 colormaps:
-#    my_cmap         =  standard, without transparency
-#    my_cmap_alpha   =  colormap with alpha channel
-#    my_cmap_mask    =  colormap that will produce an image with alpha values, for a mask
+#    my_cmap         =  MPL: standard, without transparency
+#    my_cmap_alpha   =  HV: colormap with alpha channel
+#    my_cmap_mask    =  MPL: colormap that will produce an image with alpha values
 #
 if varname=="SW":
-    clim=(-1.,900.)
+    clim=(0.,900.)
     cmap = mpl.pyplot.get_cmap("Greys_r")(np.linspace(0, 1, 256))
     my_cmap = mpl.colors.ListedColormap(cmap)
 
@@ -167,19 +163,27 @@ if varname=="SW":
     alpha=np.linspace(0, 1, len(cmap))
     cmap[:,0]=1 ; cmap[:,1]=1 ; cmap[:,2]=1
     cmap[:, 3] = alpha
-    #cmap[0,0:3]=0  # black
-    #cmap[0,3:4]=0.70  # dark
+    cmap[0,3:4]=0.85  # dark
     my_cmap_alpha = mpl.colors.ListedColormap(cmap)
-
+    alpha=cmap[:,3]
+    
+    if (pn==3):
+        background_is_fixed = False  # background needs to be recomputed each frame
+    
 
 # GOOD SETTINGS FOR TMQ:
 if varname=="Preciptable Water":
-    clim=(0.,90.)
     cmap = mpl.pyplot.get_cmap("RdBu_r")(np.linspace(0.1, .95, 256))
-    my_cmap = mpl.colors.ListedColormap(cmap)   # make sure to use values, not reference
+    my_cmap = mpl.colors.ListedColormap(cmap)   
 
     cmap=cmap.copy()  #  make a new copy otherwise we change my_cmap
+    clim=(0.,90.)
     opaque=round(.55*my_cmap.N)
+
+    if extent is not None:  # zoomed in regions, less orange, more transparancy
+        clim=(0.,110)
+        opaque=round(.65*my_cmap.N)
+    
     cmap[0:opaque, 3] = np.linspace(0, 1, opaque)
     my_cmap_alpha = mpl.colors.ListedColormap(cmap)
     alpha=cmap[:,3]
@@ -203,8 +207,12 @@ my_cmap_mask = mpl.colors.ListedColormap(cmap,'mt3')
 
 
 
-
-
+if idx is None:
+    idx1=0
+    idx2=len(dtime_all)
+else:
+    idx1=idx
+    idx2=idx+1
 
 
 #
@@ -215,7 +223,8 @@ if True:
     background = image_path
     #background = 'cartopy'   #dark blue ocean, brown land
 
-    for idx, dtime in enumerate(dtime_all):
+    for idx in range(idx1,idx2):
+        dtime=dtime_all[idx]
         t0= time.time()
         print("reading data at time=",dtime,flush=True)
         var = datafile.variables[varnamef][idx,:]  # last snapshot in file
@@ -223,8 +232,12 @@ if True:
         pngname2 = f"{pngname}-{dtime:.2f}"
 
         t1= time.time()
-        print(f"data read time: {t1-t0:.2f}s",flush=True)        
-        
+        print(f"data read time: {t1-t0:.2f}s",flush=True)
+
+        if pn==3 and  background_is_fixed == False:
+            plon = 180. - np.mod(dtime,1)*360.   # follow the sun
+            proj = ccrs.Orthographic(central_latitude=plat, central_longitude=plon)
+
         plotpoly(xlat,xlon,var,clat,clon,pngname2,title=varname,proj=proj,colormap=my_cmap,colormap_mask=my_cmap_mask,
                  clim=clim,dpi=dpi,background=background,interp_bg=interp_bg,extent=extent)
 

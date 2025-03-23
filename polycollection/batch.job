@@ -22,6 +22,7 @@
 #
 # chrys: NA zoom
 # run1 Aug:  IN
+# run2 09    IN
 #
 #
 date
@@ -32,7 +33,7 @@ scrip=~/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc
 files=( ../data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-*.nc  )
 
 # make a copy of driver.py, in case user changes it while running
-cp -f ~/codes/nclscript/polycollection/driver.py driver-$$.py
+exe=~/codes/nclscript/polycollection/driver-tmqna.py
 
 
 conda activate hv
@@ -49,7 +50,7 @@ while [[ $i -lt $len ]]; do
             break
         fi
         #echo ${files[i]}
-        python driver-$$.py  $scrip ${files[i]} $res  &
+        python $exe  $scrip ${files[i]} $res  &
         let "i += 1"
     done
 
