@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 #  used to quickly choose correct extents for regions of interest
 #
 
-pn=1
+pn=4
 if pn==1:
     plon=0
     proj=ccrs.PlateCarree(central_longitude=plon) ; projname=f"latlon{plon}"
@@ -25,7 +25,9 @@ if pn==4:
                                #standard_parallels=(33, 45)  default?
                                #standard_parallels=(37, 65)
                                #standard_parallels=(20, 45)  good?
-    NA_extent=[plon-50,plon+40,-5,65]
+    NA_extent=[plon-48,plon+30,5,63]
+    #NA_extent=[plon-50,plon+40,-5,65]
+    #NA_extent=[plon-60,plon+60,-10,70]
     
 print("proj=",proj.srs)
 fig=plt.figure(dpi=150)
