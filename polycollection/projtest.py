@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 #  used to quickly choose correct extents for regions of interest
 #
 
-pn=4
+pn=1
 if pn==1:
     plon=0
     proj=ccrs.PlateCarree(central_longitude=plon) ; projname=f"latlon{plon}"
