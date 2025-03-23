@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 #  used to quickly choose correct extents for regions of interest
 #
 
-pn=4
+pn=3
 if pn==1:
     plon=0
     proj=ccrs.PlateCarree(central_longitude=plon) ; projname=f"latlon{plon}"
@@ -16,18 +16,21 @@ if pn==2:
     proj=ccrs.Robinson()   ; projname="robinson0"
     NA_extent=[-115,20,0,70]
 if pn==3:
-    plat=30.; plon=-40.;
+    plat=28.; plon=-53.;
     proj = ccrs.Orthographic(central_latitude=plat, central_longitude=plon)
-    NA_extent=[plon-50,plon+50,plat-40,plat+35]
+    NA_extent=[plon-45,plon+45,plat-32,plat+32]  # nearly square
+    NA_extent=[plon-51.5,plon+51.5,plat-32,plat+32]  # nearly square
 if pn==4:
     plon=-45.;
+    plon=-55.;
     proj=ccrs.LambertConformal(central_longitude=plon,standard_parallels=(20, 45))
                                #standard_parallels=(33, 45)  default?
                                #standard_parallels=(37, 65)
                                #standard_parallels=(20, 45)  good?
-    NA_extent=[plon-48,plon+30,5,63]
+    NA_extent=[plon-50,plon+32,5,50]
     #NA_extent=[plon-50,plon+40,-5,65]
     #NA_extent=[plon-60,plon+60,-10,70]
+    NA_extent=[plon-40,plon+40,5,60]
     
 print("proj=",proj.srs)
 fig=plt.figure(dpi=150)
