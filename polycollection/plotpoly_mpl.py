@@ -79,19 +79,21 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
         corners = xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
     if "proj=lcc" in proj.srs:
-        #this projection is normally used with an extent
-        #polygons which are cut by projection would normally be outside of the extent
-        # thus only remove non-visable points, no need to look for cut polygons
-        mask_keep = np.all(np.isfinite(xpoly),axis=(1,2))
+        #remove polygons with  non-finite coords and which are cut by projection
+        eps=40*1e5
+        mask_keep = np.array(np.max(xpoly[:,:,0], axis=1) - np.min(xpoly[:,:,0], axis=1) < eps) & \
+            np.all(np.isfinite(xpoly),axis=(1,2))
+        #print("number of removed polygons:",len(mask_keep)-np.count_nonzero(mask_keep))
         corners=xpoly[mask_keep,:,0:2]
         data=data[mask_keep]
+
 
 
     fig=plt.figure(dpi=dpi)                    #create new figure
     ax = plt.axes(projection=proj)      #add axis to the figure
     if extent is None:
         ax.set_global()
-    else
+    else:
         ax.set_extent(extent,crs=ccrs.PlateCarree())  # extent given in lat/lon coords
 
     # add cartopy background images. needs to be first because it uses facecolor

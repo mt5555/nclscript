@@ -4,7 +4,7 @@
 #XXSBATCH --account=condo
 #XXSBATCH -p compute
 #SBATCH -N 1
-#SBATCH --time=48:00:00
+#SBATCH --time=24:00:00
 
 #
 # ne1024 plot needs about 18GB (1 image)
@@ -18,17 +18,21 @@
 # run1 Aug:  12 file x 24 snapshots, 4 at a time = ~10h
 # run2 Sep:  30 file x 24 snapshots, 4 at a time =   killed - filesystem failure
 # run3 Sep:  6 file x 24 snapshots, 6 at a time =   3.5h
-# run4 Oct:  31 file x 24 snapshots, 6 at a time =   IN    17h?
-# run? Nov:  18 file x 24 snapshots, ?
+# run4 Oct:  31 file x 24 snapshots, 6 at a time =   20.3h
 #
-# missing files:  332, 333, 334, 335      8-29(332.04-333.0), 8-30(up to 334.0), 8-31(up to 335.0)
+# chrys: NA zoom
+# run1 Aug:  IN
+#
 #
 date
-cd ~/scratch1/viz/1995-testb2/png
+cd ~/scratch1/viz/1995-testb2/png-na
 
 scrip=~/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc
 # done: 1995-08
-files=( ../data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-11-*.nc  )
+files=( ../data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-*.nc  )
+
+# make a copy of driver.py, in case user changes it while running
+cp -f ~/codes/nclscript/polycollection/driver.py driver-$$.py
 
 
 conda activate hv
@@ -45,7 +49,7 @@ while [[ $i -lt $len ]]; do
             break
         fi
         #echo ${files[i]}
-        python ~/codes/nclscript/polycollection/driver.py $scrip ${files[i]} $res  &
+        python driver-$$.py  $scrip ${files[i]} $res  &
         let "i += 1"
     done
 

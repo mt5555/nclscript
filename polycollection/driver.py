@@ -56,11 +56,11 @@ bg_path = os.path.expanduser('~/scratch1/viz/bg')
 #idx=-1  # last frame
 
 
-#name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
-#dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-31-03600.nc"
-#image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png'
-#interp_bg=True
-#idx=-1  # last frame
+name="/home/ac.mtaylor/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc"
+dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-31-03600.nc"
+image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png"
+interp_bg=True
+idx=-1  # last frame
 
 if len(sys.argv)==4:
     name=sys.argv[1]
@@ -75,6 +75,7 @@ if len(sys.argv)==4:
     else:            # NE1024 and finer
         interp_bg=True
         image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png"
+    idx=None
 elif len(sys.argv)==1:
     # sent vars by hand above
     pass    
@@ -105,10 +106,13 @@ varname="Preciptable Water"   ;  varnamef="VapWaterPath"  ; pngname='tmq'
 #varname="Vapor (2m)"   ;  varnamef="qv_2m"                ; pngname='qv2m'
 #varname="Precip"   ;  varnamef="precip_total_surf_mass_flux"  ; pngname='prec'
 
-dtime_all = datafile.variables["time"][:]  # times
-print("times mix,max=",np.min(dtime_all),np.max(dtime_all))
+if idx is None:
+    dtime_all = datafile.variables["time"][:]  # times
+else:
+    dtime_all = [datafile.variables["time"][idx]]  # times
+print("times min,max=",np.min(dtime_all),np.max(dtime_all))
 
-pn=2
+pn=4
 extent=None  # use global, unless specified below
 if pn==1:
     plon=0
@@ -137,6 +141,10 @@ if pn==4:  # good for zoomed in over north atlantic
     proj=ccrs.LambertConformal(central_longitude=plon,standard_parallels=(20, 45))
                                #standard_parallels=(33, 45)  # default
     extent=[plon-50,plon+40,-5,65]
+    projname=f"lcc-na1"
+    wres=500 ; hres=wres    # ne1024/ortho needs wres>2000 to avoid speckling
+    dpi=400                 # ne1024  4K pts visable, should for 4K x 4K image
+    background_is_fixed = True  # background needs to be recomputed each frame
 
 print(proj.srs)
 
