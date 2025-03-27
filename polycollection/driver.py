@@ -61,18 +61,20 @@ dname="/home/ac.mtaylor/scratch1/viz/1995-testb2/data/output.scream.decadal.1hou
 image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png"
 interp_bg=True
 idx=2  # 3rd frame, time=334.125
+idx=17 # 334.79     time=334.75  
 
 if len(sys.argv)==4:
     name=sys.argv[1]
     dname=sys.argv[2]
-    res=int(sys.argv[3])
-    if res >= 25:   # resoluiton as fine as NE120(27km)
+    bgopt=int(sys.argv[3])
+    if bgopt == 1:   # suggested for resolution up to NE120(27km)
+                     # imshow low-res backgroudn
         interp_bg=False
         image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
-    elif res > 3:   # 120 < NE < 1024
+    elif bgopt == 2:  # suggested for resolutions  120 < NE < 1024
         interp_bg=True
         image_path=f"{bg_path}/world.topo.200408.3x5400x2700.png"
-    else:            # NE1024 and finer
+    else:            # best results, but slow
         interp_bg=True
         image_path=f"{bg_path}/world.topo.200408.3x21600x10800.png"
     idx=None
@@ -100,8 +102,8 @@ xlon = file1.variables["grid_corner_lon"][:,:]
 #var=Rearth_km*np.sqrt(area)
 
 datafile=Dataset(dname,"r")
-varname="Preciptable Water"   ;  varnamef="VapWaterPath"  ; pngname='tmq'
-#varname="LW"   ;  varnamef="LW_flux_up_at_model_top"      ; pngname='lw'
+#varname="Preciptable Water"   ;  varnamef="VapWaterPath"  ; pngname='tmq'
+varname="LW"   ;  varnamef="LW_flux_up_at_model_top"      ; pngname='lw'
 #varname="SW"   ;  varnamef="SW_flux_up_at_model_top"       ; pngname='sw'
 #varname="Vapor (2m)"   ;  varnamef="qv_2m"                ; pngname='qv2m'
 #varname="Precip"   ;  varnamef="precip_total_surf_mass_flux"  ; pngname='prec'
@@ -109,7 +111,7 @@ varname="Preciptable Water"   ;  varnamef="VapWaterPath"  ; pngname='tmq'
 dtime_all = datafile.variables["time"][:]  # times
 print("times min,max=",np.min(dtime_all),np.max(dtime_all))
 
-pn=3
+pn=2
 extent=None  # use global, unless specified below
 background_is_fixed = True
 if pn==1:
@@ -125,10 +127,11 @@ if pn==2:
     wres=10000 ; hres=round(wres/2)
     dpi=1600    # mpl image: 8.3K x 4.3K     (NE1024: 8k pts on equator)
 if pn==3:
-    plat=28.; plon=-53.;
+    plat=28.; plon=-53.;   # atlantic
+    plat=28.; plon=-85     #shifted to show some pacific
     #plon = 180. - np.mod(dtime,1)*360.   # follow the sun
     proj = ccrs.Orthographic(central_latitude=plat, central_longitude=plon)
-    extent=[plon-51.5,plon+51.5,plat-32,plat+32]
+    #extent=[plon-51.5,plon+51.5,plat-32,plat+32]
     projname=f"ortho_{plat:.0f}_{plon:.0f}"
     wres=2000 ; hres=wres    # ne1024/ortho needs wres>2000 to avoid speckling
     dpi=1000   #             # ne1024  4K pts visable, should for 4K x 4K image
@@ -154,21 +157,48 @@ print(proj.srs)
 #    my_cmap_mask    =  MPL: colormap that will produce an image with alpha values
 #
 if varname=="SW":
-    clim=(0.,900.)
+    clim=(0.,1200.)
     cmap = mpl.pyplot.get_cmap("Greys_r")(np.linspace(0, 1, 256))
     my_cmap = mpl.colors.ListedColormap(cmap)
 
-    # 100% white, with transparancy
     cmap=cmap.copy()  #  make a new copy otherwise we change my_cmap
-    alpha=np.linspace(0, 1, len(cmap))
+    # 100% white, with transparancy
     cmap[:,0]=1 ; cmap[:,1]=1 ; cmap[:,2]=1
-    cmap[:, 3] = alpha
-    cmap[0,3:4]=0.85  # dark
+
+    ramp_x0=50     # start around 50 so land is bright/clear 
+    ramp_x=64      # stopping around 90 dims the clouds too much
+    ramp_y=1.0
+    cmap[0:ramp_x0]=0
+    #cmap[0,3]=1.0      # opaque where SW=0 (dark)
+                        # beter to use ortho projection and dont show dark regions
+    cmap[ramp_x0:ramp_x,3]=np.linspace(0,ramp_y,ramp_x-ramp_x0)
+    cmap[ramp_x:256,3]=np.linspace(ramp_y,1,256-ramp_x)
     my_cmap_alpha = mpl.colors.ListedColormap(cmap)
     alpha=cmap[:,3]
-    
-    if (pn==3):
-        background_is_fixed = False  # background needs to be recomputed each frame
+
+
+
+if varname=="LW":
+    clim=(65.,375.)
+    cmap = mpl.pyplot.get_cmap("Greys")(np.linspace(0, 1, 256))
+    my_cmap = mpl.colors.ListedColormap(cmap)
+
+    cmap=cmap.copy()  #  make a new copy otherwise we change my_cmap
+    # 100% white, with transparancy
+    cmap[:,0]=1 ; cmap[:,1]=1 ; cmap[:,2]=1
+
+    ramp_x0=126
+    ramp_x =200
+                    
+    ramp_y=1.0
+    cmap[0:ramp_x0]=1
+    cmap[ramp_x0:ramp_x,3]=np.linspace(ramp_y,0,ramp_x-ramp_x0)
+    cmap[ramp_x:256,3]=0
+    my_cmap_alpha = mpl.colors.ListedColormap(cmap)
+    alpha=cmap[:,3]
+
+
+
     
 
 # GOOD SETTINGS FOR TMQ:
@@ -182,6 +212,7 @@ if varname=="Preciptable Water":
 
     if extent is not None:  # zoomed in regions, less orange, more transparancy
         clim=(0.,110)
+        #clim=(0.,100) also good
         opaque=round(.65*my_cmap.N)
     
     cmap[0:opaque, 3] = np.linspace(0, 1, opaque)

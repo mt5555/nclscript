@@ -14,7 +14,10 @@
 cd ~/scratch1/viz/1995-testb2
 conda activate hv   # for ffmpeg
 
-pngdir=png-na
+field=sw
+#pngdir=png-robinson
+#pngdir=png-sw
+pngdir=png-sw-robinson
 
 
 for i in {320..430}; do
@@ -34,25 +37,47 @@ done
 # for PNGs, use -framerate not -r
 #
 #
-# 1 day = 24 frames.  12 = 2 seconds per day
-#
-# NE1024 Robinson
-# original 8255 x 4345
-# to test crop arguments:
-#  magick tmq-332.00-composite.png  -crop 7968x4064+150+140 +repage temp.png
-#
-#  NA lambert projection:
-# original 2036 x 1558    crop to 2032 x 1552 
 #
 #
-#
-#ffmpeg  -framerate 20 -pattern_type glob -i "$pngdir/tmq-*-composite.png" \
-#-c:v libx264  -vf crop=7968:4064:150:140,scale="1992:-1" -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
-#-r 30   scream-tmq-na.mp4
+#Robinsin Global TMQ movie:
+#   original 8255 x 4345
+#   to test crop arguments:
+#    magick tmq-332.00-composite.png  -crop 7968x4064+150+140 +repage temp.png
+ffmpeg  -framerate 20 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
+-c:v libx264  -vf crop=7968:4064:150:140,scale="1992:-1" -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
+-r 30   scream-${field}-robinson.mp4
 
-ffmpeg  -framerate 20 -pattern_type glob -i "$pngdir/tmq-*-composite.png" \
--c:v libx264  -vf crop=2032:1552:2:3 -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
--r 30   scream-tmq-na.mp4
+#
+#  NA lambert projection
+#  original 2036 x 1558    crop to 2032 x 1552 
+#ffmpeg  -framerate 20 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
+#-c:v libx264  -vf crop=2032:1552:2:3 -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
+#-r 30   scream-${field}.mp4
+
+#
+# NA TMQ Ortho movie
+# original 3833x5160   slight white border
+#          3776x5120
+# magick tmq-361.00-composite.png  -crop 4944x3632+108+102 +repage temp.png 
+# scale: 2472, 1236
+# make this one a little slower so TC doens't spin too fast
+#
+#ffmpeg  -framerate 15 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
+#-c:v libx264  -vf crop=4944:3632:108:102,scale="1236:-1"  -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
+#-r 30   scream-${field}.mp4
+
+
+
+
+#
+# NA SW Ortho movie
+# original 3896x3896   slight white border
+# magick tmq-361.00-composite.png  -crop 3840x3840+28+28 +repage temp.png 
+# scale: 1920, 960
+#
+#ffmpeg  -framerate 15 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
+#-c:v libx264  -vf crop=3840:3840:28:28,scale="960:-1"  -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
+#-r 30   scream-${field}.mp4
 
 
 

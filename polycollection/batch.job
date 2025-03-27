@@ -26,20 +26,20 @@
 #
 #
 date
-cd ~/scratch1/viz/1995-testb2/png-na
+cd ~/scratch1/viz/1995-testb2/png-sw-robinson
 
 scrip=~/scratch1/mapping/grids/TEMPEST_ne1024pg2.scrip.nc
 # done: 1995-08
 files=( ../data/output.scream.decadal.1hourlyINST_ne1024pg2.INSTANT.nhours_x1.1995-08-*.nc  )
 
 # make a copy of driver.py, in case user changes it while running
-exe=~/codes/nclscript/polycollection/driver-tmqna.py
+exe=~/codes/nclscript/polycollection/driver-sw.py
 
 
 conda activate hv
 
 echo $scrip
-res=3    # 3.25 km
+bgopt=3    # interpolate highres image
 batch_size=6   # process this many files in parallel
 
 i=0
@@ -50,7 +50,7 @@ while [[ $i -lt $len ]]; do
             break
         fi
         #echo ${files[i]}
-        python $exe  $scrip ${files[i]} $res  &
+        python $exe  $scrip ${files[i]} $bgopt  &
         let "i += 1"
     done
 
