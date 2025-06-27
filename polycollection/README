@@ -27,9 +27,10 @@ rotating a lat/lon projection) with imshow seems to be at a fixed, low
 resolution independent of the data size and image dpi. Resolution is
 comparable to NE120. (1000 pts on equator).  So for resolutions up to
 NE120 use imshow (and use 5400x2700 image, no reason to use higher
-resolution image).  Low res 5400x2700 image is like NE675 at the
-equator.  At NE1024, comput time is the same for LR and HR image so
-might as well use HR.
+resolution image).  For higher resolution, we intepolate to the output
+projection and then plot interpolated data.  (interp_bg=True) Low res
+5400x2700 image is like NE675 at the equator.  At NE1024, comput time
+is the same for LR and HR image so might as well use HR.
 
 data <= NE120    interp_bg=False (imshow)     5400x2700 image
 data < NE1024    interp_bg=True               5400x2700 image

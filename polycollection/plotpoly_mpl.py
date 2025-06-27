@@ -125,8 +125,8 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
 
     p.set_clim(clim)
     p.set_cmap(colormap)
-    fig.colorbar(p,ax=ax)
-    ax.set_title(title)
+    #fig.colorbar(p,ax=ax)
+    #ax.set_title(title)
 
         
     print("add polycollection...")

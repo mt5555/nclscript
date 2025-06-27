@@ -111,7 +111,7 @@ varname="LW"   ;  varnamef="LW_flux_up_at_model_top"      ; pngname='lw'
 dtime_all = datafile.variables["time"][:]  # times
 print("times min,max=",np.min(dtime_all),np.max(dtime_all))
 
-pn=2
+pn=3
 extent=None  # use global, unless specified below
 background_is_fixed = True
 if pn==1:

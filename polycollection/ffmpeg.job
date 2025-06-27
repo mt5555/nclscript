@@ -14,10 +14,10 @@
 cd ~/scratch1/viz/1995-testb2
 conda activate hv   # for ffmpeg
 
-field=sw
+field=lw
 #pngdir=png-robinson
 #pngdir=png-sw
-pngdir=png-sw-robinson
+pngdir=png-lw-na
 
 
 for i in {320..430}; do
@@ -40,12 +40,12 @@ done
 #
 #
 #Robinsin Global TMQ movie:
-#   original 8255 x 4345
+#   original TMQ:  8255 x 4345     SW:  8255 x 4345 
 #   to test crop arguments:
 #    magick tmq-332.00-composite.png  -crop 7968x4064+150+140 +repage temp.png
-ffmpeg  -framerate 20 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
--c:v libx264  -vf crop=7968:4064:150:140,scale="1992:-1" -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
--r 30   scream-${field}-robinson.mp4
+#ffmpeg  -framerate 20 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
+#-c:v libx264  -vf crop=7968:4064:150:140,scale="1992:-1" -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
+#-r 30   scream-${field}-robinson.mp4
 
 #
 #  NA lambert projection
@@ -69,15 +69,14 @@ ffmpeg  -framerate 20 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
 
 
 
-#
 # NA SW Ortho movie
 # original 3896x3896   slight white border
 # magick tmq-361.00-composite.png  -crop 3840x3840+28+28 +repage temp.png 
 # scale: 1920, 960
 #
-#ffmpeg  -framerate 15 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
-#-c:v libx264  -vf crop=3840:3840:28:28,scale="960:-1"  -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
-#-r 30   scream-${field}.mp4
+ffmpeg  -framerate 15 -pattern_type glob -i "$pngdir/${field}-*-composite.png" \
+-c:v libx264  -vf crop=3840:3840:28:28,scale="960:-1"  -pix_fmt yuv420p  -preset slow -crf 22 -tune animation \
+-r 30   scream-${field}.mp4
 
 
 
