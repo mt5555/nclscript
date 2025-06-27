@@ -9,7 +9,7 @@
 # error of Ngl is missing)
 #
 #from __future__ import print_function
-import os, numpy
+import sys, os, numpy
 from netCDF4 import Dataset
 from matplotlib import pyplot
 from plotutils import mpl_plot, myargs, interp_to_latlon, mpl_streamlines
@@ -325,7 +325,7 @@ if proj != 'latlon':
 if timedim and t1!=0:
     outname=outname + "-t"+str(t1)
 if plev !=None:
-    outname=outname + "-p"+str(plev)
+    outname=outname + "-p"+str(round(plev[0]))
 else:
     if levdim:
         outname=outname + "-k"+str(klev)
@@ -383,7 +383,7 @@ else:
     if var1=="ps" or var1=="qv_2m":
         cmap='RdYlBu'    
     if var1=="TMQ" or var1=="VapWaterPath":
-        cmap='RdBu_r
+        cmap='RdBu_r'
 
 
 
@@ -591,12 +591,18 @@ for t in range(t1,t2):
             if scale:
                 coldata=coldata*scale
 
-            if len(idx)==2:
-                p =  hyam[:]*ps0 + hybm[:]*ps[t,idx[0],idx[1]]
-                p_i= hyai[:]*ps0 + hybi[:]*ps[t,idx[0],idx[1]]
+            if timedim:
+                psloc=ps[t,]
             else:
-                p =  hyam[:]*ps0 + hybm[:]*ps[t,idx[0]]
-                p_i= hyai[:]*ps0 + hybi[:]*ps[t,idx[0]]
+                psloc=ps
+            if len(idx)==2:
+                psloc=psloc[idx[0],idx[1]]
+            else:
+                psloc=psloc[idx[0]]
+
+
+            p =  hyam[:]*ps0 + hybm[:]*psloc
+            p_i= hyai[:]*ps0 + hybi[:]*psloc
 
             if compute_dtheta_dp or compute_dt_dp:
                 dp = p_i[1:nlev+1]-p_i[0:nlev]
