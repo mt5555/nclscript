@@ -227,11 +227,9 @@ timedim =  "time" in dimname
 levdim = "lev" in dimname or "ilev" in dimname or "plev" in dimname
 dim2 = "dim2" in dimname
 if dim2:
-    if dataf.ndim==5: dataf = dataf[:,:,var1_idx,:,:]
-    if dataf.ndim==4: dataf = dataf[:,:,var1_idx,:]
-    print("found dim2 index. using var1_idx=",var1_idx)
     dimname=[ x for x in dimname if x!= 'dim2']  # remove dim2 from list of dimensions
-    print("dataf: ",dataf.shape,dimname)
+    print("found dim2 index. squeezing with dim2=",var1_idx,"dimname=",dimname)
+
 
 
 ntimes=1
@@ -437,7 +435,10 @@ for t in range(t1,t2):
             print("variable has dim2 dimension. extracting component dim2=",var1_idx)
             
         print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
-        data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)
+        if dim2:
+            data2d=extract_level(dataf[t,:,var1_idx,],klev,plev,ps[t,...],hyam,hybm,kidx-1)
+        else:
+            data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)
         
 
         if compute_streamlines:
@@ -614,14 +615,14 @@ for t in range(t1,t2):
         for idx in (min_i1,max_i1):
             if (timedim):
                 if len(idx)==2:
-                    coldata=dataf[t,:,idx[0],idx[1]]
+                    coldata=dataf[t,...,idx[0],idx[1]]
                 else:
-                    coldata=dataf[t,:,idx[0]]
+                    coldata=dataf[t,...,idx[0]]
             elif (levdim):
                 if len(idx)==2:
-                    coldata=dataf[:,idx[0],idx[1]]
+                    coldata=dataf[...,idx[0],idx[1]]
                 else:
-                    coldata=dataf[:,idx[0]]
+                    coldata=dataf[...,idx[0]]
             print("timedim, levdim",timedim,levdim)
             print("coldata",coldata)
             if scale:
