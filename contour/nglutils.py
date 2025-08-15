@@ -51,8 +51,8 @@ def extract_level(dataf,klev,plev,PS,hyam,hybm,kidx=0):
         return data2d
 
     if kidx==len(dataf.shape)-1:
-        print("need to interpolating last dimension!")
         if plev == None:
+            print("extract_level: index=",klev)
             data2d=dataf[...,klev]
         else:
             # vertical interpolation

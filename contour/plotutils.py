@@ -280,6 +280,17 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         latS = 0
         latN = 70
         ax.set_extent([lonW, lonE, latS, latN])
+    elif proj == "HRRR":
+        plotproj=crs.LambertConformal(
+            central_longitude=262.5,
+            central_latitude=38.5,
+        )
+        ax = pyplot.axes(projection=plotproj)
+        lonW = -125
+        lonE = -70
+        latS = 20
+        latN = 53
+        ax.set_extent([lonW, lonE, latS, latN])
     elif proj == "namerica2":
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
@@ -313,8 +324,13 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
     
     # structured lat/lon or unstructured data?
     struct=False
+    add_cyclic=True
     if len(lon)*len(lat) == numpy.prod(data2d.shape): struct=True
-    
+    if lon.ndim==2 and lat.ndim==2:
+        struct=True
+        add_cyclic=False  # assume regional grid
+
+        
     compute_tri=True
     if ~struct and os.path.isfile(gllfile):
         cfile = Dataset(gllfile,"r")
@@ -350,7 +366,11 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
 
     pl2=None
     if struct:
-        data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
+        if add_cyclic:
+            data2d_ext, lon2 = add_cyclic_point(data2d, coord=lon,axis=1)
+        else:
+            data2d_ext=data2d
+            lon2=lon
         print("MPL plotting structured data (with added cyclic point)")
         if contour_opt=='' or contour_opt=='raster':
             print("using pcolormesh")
@@ -372,8 +392,8 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
                            transform=dataproj, cmap=cmap)
         
     elif cellbounds:
+        print("MPL polycollection plot using scrip cells")
         from matplotlib.collections import PolyCollection
-        print("MPL plot using scrip cells")
         # latlon->cartesian->local coords. this will put any seams at plot boundaries
         proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
         x3d = proj3d.transform_points(dataproj,clon[:,:],clat[:,:])
@@ -396,7 +416,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         d= ((x0[:,0]-x1[:,0])**2 + (x0[:,1]-x1[:,1])**2)**0.5
         dmax=max(d)
         dmin=min(d)
-        print("cell diameter min,max:",dmin,dmax)
+        print("projected-cell diameter min,max:",dmin,dmax)
         xi=(d < 100*dmin)  # and (x1!=numpy.inf) and (y1!=numpy.inf)
         datai=data2d[xi]
         print("cells removed: ",len(data2d)-len(datai),"out of",len(data2d))
@@ -505,9 +525,9 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
     if coutlines==3:
         ax.coastlines(resolution='10m')
         
-    #gl=ax.gridlines(linewidth=0.2,alpha=0.5)
-    #gl.left_labels = True
-    #gl.bottom_labels = True
+    gl=ax.gridlines(linewidth=0.2,alpha=0.5)
+    gl.left_labels = True
+    gl.bottom_labels = True
 
     # Plot GLL nodes for perspective
     #pl = ax.plot(lon, lat, 'k.', projection=dataproj, markersize=1)

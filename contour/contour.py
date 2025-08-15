@@ -102,7 +102,14 @@ if var1=="ps":
 ################################################################
 # special processing
 ################################################################
-compute_psdiff=False
+
+if var1=="u-eamxx": 
+    print("Special processing:  u-eamxx") 
+    var1_read="horiz_winds"
+    var1_idx=0
+    longname="U"
+
+compute_psdiff=False    
 if var1=="pnh-ps": 
     print("Special processing:  pnhdiff=pnh-ps") 
     compute_psdiff=True
@@ -199,7 +206,8 @@ dataf  = infile.variables[var1_read]
 data2d_plot2=numpy.array([])
 if var2_read != None:
     dataf2 = infile.variables[var2_read]
-print("dataf: ",dataf.shape,dataf.dimensions)
+dimname=dataf.dimensions    
+print("dataf: ",dataf.shape,dimname)
 
 
 title=var1
@@ -215,8 +223,17 @@ if units=="" and hasattr(dataf,"units"):
 ################################################################
 # time dimension and time values to plot
 ################################################################
-timedim =  "time" in dataf.dimensions
-levdim = "lev" in dataf.dimensions or "ilev" in dataf.dimensions
+timedim =  "time" in dimname
+levdim = "lev" in dimname or "ilev" in dimname or "plev" in dimname
+dim2 = "dim2" in dimname
+if dim2:
+    if dataf.ndim==5: dataf = dataf[:,:,var1_idx,:,:]
+    if dataf.ndim==4: dataf = dataf[:,:,var1_idx,:]
+    print("found dim2 index. using var1_idx=",var1_idx)
+    dimname=[ x for x in dimname if x!= 'dim2']  # remove dim2 from list of dimensions
+    print("dataf: ",dataf.shape,dimname)
+
+
 ntimes=1
 times=numpy.array([0])
 if timedim:
@@ -244,11 +261,14 @@ if len(range(t1,t2)) > 1 :
 nlev=0
 nlev_data=0
 if levdim:
-    nlev=infile.dimensions["lev"].size
     #lev=infile.variables["lev"][:]
-    if "lev" in dataf.dimensions:
+    if "plev" in dimname:
+        nlev=infile.dimensions["plev"].size
         nlev_data=nlev
-    if "ilev" in dataf.dimensions:
+    if "lev" in dimname:
+        nlev=infile.dimensions["lev"].size
+        nlev_data=nlev
+    if "ilev" in dimname:
         nlev_data=infile.dimensions["ilev"].size
 
     if klev==None:
@@ -270,9 +290,9 @@ else:
 ################################################################
 ncol=0
 ncol_d=0
-if "ncol" in dataf.dimensions:
+if "ncol" in dimname:
     ncol=infile.dimensions["ncol"].size
-if "ncol_d" in dataf.dimensions:
+if "ncol_d" in dimname:
     ncol=infile.dimensions["ncol_d"].size
 
 
@@ -292,7 +312,7 @@ if "ps" in infile.variables.keys():
 if "P0" in infile.variables.keys():
     ps0=infile.variables["P0"].getValue()
 
-if "ncol_d" in dataf.dimensions:
+if "ncol_d" in dimname:
     lat  = infile.variables["lat_d"][:]
     lon  = infile.variables["lon_d"][:]
     PSname="DYN_PS"
@@ -300,8 +320,21 @@ if "ncol_d" in dataf.dimensions:
         ps=infile.variables["DYN_PS"]
         have_ps=True
 else:
-    lat  = infile.variables["lat"][:]
-    lon  = infile.variables["lon"][:]
+    if "lat" in infile.variables.keys():
+        lat  = infile.variables["lat"][:]
+        lon  = infile.variables["lon"][:]
+    else:   # some EAMxx outputs dont contain lat/lon try the SCRIP file:
+        print("No lat/lon coordinate variables in file, trying SCRIP file:")
+        if os.path.isfile(scrip_file):
+            infile2 = Dataset(scrip_file,"r")
+            lat  = infile2.variables["grid_center_lat"][:]
+            lon  = infile2.variables["grid_center_lon"][:]
+            # if in Radians, convert to degrees
+            if "radian" in infile2.variables["grid_center_lat"].units.lower():
+                lon=lon*180/numpy.pi
+                lat=lat*180/numpy.pi
+
+    
     PSname="PS"
     if "PS" in infile.variables.keys():
         ps=infile.variables["PS"]
@@ -394,14 +427,18 @@ for t in range(t1,t2):
     # 2D maps
     #
     if (timedim and levdim):
-        dimname=dataf.dimensions
+        if "plev" in dimname:
+            kidx=dimname.index("plev")
         if "lev" in dimname:
             kidx=dimname.index("lev")
         if "ilev" in dimname:
             kidx=dimname.index("ilev")
+        if "dim2" in dimname:
+            print("variable has dim2 dimension. extracting component dim2=",var1_idx)
+            
         print(t+1,"time=",times[t],"k=",klev+1,"/",nlev_data,"plev=",plev," level index=",kidx)
         data2d=extract_level(dataf[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)
-        print("data2d shape=",data2d.shape)
+        
 
         if compute_streamlines:
             data2d_2=extract_level(dataf2[t,...],klev,plev,ps[t,...],hyam,hybm,kidx-1)            
@@ -436,7 +473,6 @@ for t in range(t1,t2):
 
     elif (timedim):
         print(t+1,"time=",times[t]," time & space dimensions only")
-        dimname=dataf.dimensions
         #data2d=numpy.squeeze(dataf[t,...],0)
         data2d=dataf[t,...]
         if compute_prect:
