@@ -17,7 +17,7 @@ from nglutils import  ngl_plot, ngl_open, ngl_end, ngl_read_colormap, \
                       extract_level, ngl_vertprofile
 
 
-inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl, \
+inname,inname2,vertname,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl, \
 scrip_file,gll_file,se_file,contour_opt,coutlines,user_dpi \
     = myargs(os.sys.argv)
 
@@ -31,7 +31,10 @@ longname=""
 print('contour:',var1,'proj=',proj,'clev=',clev)
 infile = Dataset(inname,"r")
 
-
+infile2=None
+if inname2 != '':
+    infile2 = Dataset(inname2,"r")
+    
 ################################################################
 # custom axis for vertical profiles
 ################################################################
@@ -272,11 +275,19 @@ if levdim:
     if klev==None:
         klev=int(3*nlev/4)
 
-if "hyam" in infile.variables.keys():
-    hyam=infile.variables['hyam'][:]
-    hybm=infile.variables['hybm'][:]
-    hyai=infile.variables['hyai'][:]
-    hybi=infile.variables['hybi'][:]
+# look for hyam/hybm in vertfile, then infile
+if vertname=='':
+    vertfile=infile
+else:
+    vertfile = Dataset(vertname,"r")
+print("vertfile keys: ",vertfile.variables.keys(),vertname)
+have_hy=False
+if "hyam" in vertfile.variables.keys():
+    hyam=vertfile.variables['hyam'][:]
+    hybm=vertfile.variables['hybm'][:]
+    hyai=vertfile.variables['hyai'][:]
+    hybi=vertfile.variables['hybi'][:]
+    have_hy=True
 else:
     hyam=None
     hybm=None
@@ -300,53 +311,62 @@ if "ncol_d" in dimname:
 ################################################################
 # get correct PS variable
 ################################################################
+psfile=infile
+if infile2!=None:
+    keys=infile2.variables.keys()
+    if "ps" in keys or "PS" in keys or "DYN_PS" in keys:
+        print("PS found in: ",inname2)
+        psfile=infile2
+
 ps=numpy.empty([ntimes,1])  # dummy array, wont be used, but needs to be indexed    
 have_ps=False
-if "ps" in infile.variables.keys():
-    ps0=1000*100
-    ps=infile.variables["ps"]
-    have_ps=True
 
-if "P0" in infile.variables.keys():
-    ps0=infile.variables["P0"].getValue()
+if "P0" in psfile.variables.keys():
+    ps0=psfile.variables["P0"].getValue()
 
 if "ncol_d" in dimname:
-    lat  = infile.variables["lat_d"][:]
-    lon  = infile.variables["lon_d"][:]
+    lat  = psfile.variables["lat_d"][:]
+    lon  = psfile.variables["lon_d"][:]
     PSname="DYN_PS"
-    if "DYN_PS" in infile.variables.keys():
-        ps=infile.variables["DYN_PS"]
+    if "DYN_PS" in psfile.variables.keys():
+        ps=psfile.variables["DYN_PS"]
         have_ps=True
 else:
-    if "lat" in infile.variables.keys():
-        lat  = infile.variables["lat"][:]
-        lon  = infile.variables["lon"][:]
-    else:   # some EAMxx outputs dont contain lat/lon try the SCRIP file:
+    if "lat" in psfile.variables.keys():
+        lat  = psfile.variables["lat"][:]
+        lon  = psfile.variables["lon"][:]
+    else: 
         print("No lat/lon coordinate variables in file, trying SCRIP file:")
         if os.path.isfile(scrip_file):
-            infile2 = Dataset(scrip_file,"r")
-            lat  = infile2.variables["grid_center_lat"][:]
-            lon  = infile2.variables["grid_center_lon"][:]
-            # if in Radians, convert to degrees
-            if "radian" in infile2.variables["grid_center_lat"].units.lower():
+            sfile = Dataset(scrip_file,"r")
+            lat  = sfile.variables["grid_center_lat"][:]
+            lon  = sfile.variables["grid_center_lon"][:]
+            if "radian" in sfile.variables["grid_center_lat"].units.lower():
                 lon=lon*180/numpy.pi
                 lat=lat*180/numpy.pi
-
-    
-    PSname="PS"
-    if "PS" in infile.variables.keys():
-        ps=infile.variables["PS"]
+    if "PS" in psfile.variables.keys():
+        PSname="PS"
+        ps=psfile.variables["PS"]
         have_ps=True
+    if "ps" in psfile.variables.keys():
+        PSname="ps"
+        ps0=1000*100
+        ps=psfile.variables["ps"]
+        have_ps=True
+
 
 
 if plev != None:
     if not have_ps:
         print("Error: need PS to interpolate to plev=",plev)
         sys.exit(2)
+    if not have_hy:
+        print("Error: need hyam/hybm to interpolate to plev=",plev)
+        sys.exit(2)
     print("Interpolating to pressure level = ",plev,"using",PSname)
 else:
-    if hyam!=None:
-        print("klev=",klev+1," reference pressure: ",ps0*(hybm[k]+hyam[k]))
+    if have_hy:
+        print("klev=",klev+1," reference pressure: ",ps0*(hybm[klev]+hyam[klev]))
 
 ###########################################
 # construct output name

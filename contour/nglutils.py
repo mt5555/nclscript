@@ -55,9 +55,24 @@ def extract_level(dataf,klev,plev,PS,hyam,hybm,kidx=0):
             print("extract_level: index=",klev)
             data2d=dataf[...,klev]
         else:
+            # vertical interpolation   data = ncol, lev  or lat,lon,lev
+            dataf2 = numpy.moveaxis(dataf,-1,0)  # so now we are lev,ncol
+            print("Interpolating last dimension (after moving it to first dim)")
+            print("dataf2: ", dataf.shape, dataf2.shape)
             # vertical interpolation
-            print("vertical interpolation last dimension, not coded")
-            sys.exit(1)
+            v_interp = 2   # type of interpolation: 1 = linear, 2 = log, 3 = loglog
+            extrap = True  # is extrapolation desired if data is outside the range of PS
+            P0mb = 1000    # ps in Pa, but this argument must be in mb
+            
+            if len(dataf2.shape)==2:   # lev,ncol
+                dataf2=numpy.expand_dims(dataf2,axis=2)  # lev,ncol,1
+                PS2=numpy.expand_dims(PS,axis=1)        # ncol,1
+                data2d=numpy.squeeze(ngl_vinth2p(dataf2,hyam,hybm,plev,PS2,v_interp,P0mb,1,extrap))
+            elif len(dataf.shape)==3:  # lev,lat,lon
+                data2d=numpy.squeeze(ngl_vinth2p(dataf2,hyam,hybm,plev,PS,v_interp,P0mb,1,extrap))
+            else:
+                print("ERROR: extract_level: dataf() needs to be 2 or 3 dimensiosn")
+
         return data2d
 
     print("Error: level dimension was not first or last")

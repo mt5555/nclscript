@@ -45,9 +45,10 @@ from netCDF4 import Dataset
 #
 
 def myargs(argv):
-    inputfile = ''
+    inputfile  = ''
     inputfile2 = ''
-    scripfile = ''
+    vertfile   = ''
+    scripfile  = ''
     gllfile = ''
     se_file = ''
     varname = ''
@@ -63,7 +64,7 @@ def myargs(argv):
     projection='latlon'
     user_dpi=300
     try:
-        opts, args = getopt.getopt(argv[1:],"i:j:s:g:t:k:p:y:c:m:r:e:f:o:d:")
+        opts, args = getopt.getopt(argv[1:],"i:c:d:e:f:g:j:k:m:o:p:r:s:t:v:y:")
     except getopt.GetoptError:
         print (name,' -i inputfile [options] varname')
         print (name,' -c nlevels  number of contour levels (ignored in MPL)')
@@ -83,6 +84,7 @@ def myargs(argv):
         print (name,' -r 181x360  remap to lat/lon cap grid')
         print (name,' -s scriptfile')
         print (name,' -t timeindex starting at 1 [0=default-last frame. -1=all times]')
+        print (name,' -v vertfile')
         print (name,' -y ngl,mpl')
 
 
@@ -93,6 +95,8 @@ def myargs(argv):
             inputfile = arg
         elif opt in ("-j"):
             inputfile2 = arg
+        elif opt in ("-v"):
+            vertfile = arg
         elif opt in ("-t"):
             timeindex=int(arg)
             timeindex=timeindex-1  # convert to zero-indexing
@@ -130,7 +134,7 @@ def myargs(argv):
 
 
     print("inputfile=",inputfile)
-    return inputfile,inputfile2,args,projection,timeindex,levindex,pressurelev,clev,\
+    return inputfile,inputfile2,vertfile,args,projection,timeindex,levindex,pressurelev,clev,\
         nlatlon_interp,use_ngl,scripfile,gllfile,se_file,contour_opt,coutlines,user_dpi
 
 
