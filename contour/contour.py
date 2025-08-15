@@ -344,8 +344,9 @@ if plev != None:
         print("Error: need PS to interpolate to plev=",plev)
         sys.exit(2)
     print("Interpolating to pressure level = ",plev,"using",PSname)
-
-
+else:
+    if hyam!=None:
+        print("klev=",klev+1," reference pressure: ",ps0*(hybm[k]+hyam[k]))
 
 ###########################################
 # construct output name
