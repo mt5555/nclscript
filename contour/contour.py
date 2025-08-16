@@ -228,6 +228,7 @@ if units=="" and hasattr(dataf,"units"):
 ################################################################
 timedim =  "time" in dimname
 levdim = "lev" in dimname or "ilev" in dimname or "plev" in dimname
+# EAMxx horiz_winds processing. has dimension dim2.  0=U, 1=V
 dim2 = "dim2" in dimname
 if dim2:
     dimname=[ x for x in dimname if x!= 'dim2']  # remove dim2 from list of dimensions
