@@ -226,7 +226,12 @@ if units=="" and hasattr(dataf,"units"):
 ################################################################
 # time dimension and time values to plot
 ################################################################
-timedim =  "time" in dimname
+timedim =  "time" in dimname or "valid_time" in dimname
+if "valid_time" in dimname:
+    timename = "valid_time"
+else:
+    timename = "time"
+    
 levdim = "lev" in dimname or "ilev" in dimname or "plev" in dimname
 # EAMxx horiz_winds processing. has dimension dim2.  0=U, 1=V
 dim2 = "dim2" in dimname
@@ -239,8 +244,8 @@ if dim2:
 ntimes=1
 times=numpy.array([0])
 if timedim:
-    ntimes = infile.dimensions['time'].size
-    times = infile.variables["time"][:]
+    ntimes = infile.dimensions[timename].size
+    times = infile.variables[timename][:]
 
 if timeindex==None or timeindex==-1:
     t1=ntimes-1      # last timelevel

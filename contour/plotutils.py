@@ -138,6 +138,77 @@ def myargs(argv):
         nlatlon_interp,use_ngl,scripfile,gllfile,se_file,contour_opt,coutlines,user_dpi
 
 
+def shift_anti_meridian_polygons(polygons, eps=40):
+    #shift polygons that are split on the anti-meridian for visualization
+
+    diff = numpy.array(numpy.max(polygons[:,:,0], axis=1) - numpy.min(polygons[:,:,0], axis=1) > eps)
+    lon_coord_mask = polygons[:,:,0] < eps   # all polygons on left edge
+    lon_coord_mask[~diff,:] = 0              # mask=0 for subset of left polygons which are not cut
+    polygons_new=polygons[diff,:,:]            # set of all split polygons
+    polygons[lon_coord_mask,0] = polygons[lon_coord_mask,0] + 360
+
+    lon_coord_mask = polygons_new[:,:,0] > eps  # coords on right side
+    polygons_new[lon_coord_mask,0] = polygons_new[lon_coord_mask,0] - 360
+    # also return polygons_new, and "diff", so we can extract
+    # data_new = data[diff] 
+    return [polygons_new,diff]
+
+def remove_polygons(proj,xpoly,data, clon, clat):
+    # given a list of polygons in the mapped coordinate:
+    # for lat/lon: duplicate cut polygons on left and right edge
+    # for lat/lon like global projections: remove all cut polygons
+    # for non-global projections: remove non-visible polygons
+    # output:
+    #    corners = list of new polygons  (drop 3rd unused coordinate)
+    #    datai
+    if "proj=eqc" in proj.srs:
+        # duplicate cut polygons on left and right edge of plot
+        [xpoly_new,mask_new] = shift_anti_meridian_polygons(xpoly)
+        corners=numpy.concatenate((xpoly[:,:,0:2],xpoly_new[:,:,0:2]),axis=0)
+        datai=numpy.concatenate((data,data[mask_new]),axis=0)
+        print(f"lat/lon plot: adding {len(mask_new)} periodic polygons")
+    if "proj=robin" in proj.srs:
+        # remove all cut polygons
+        eps=40*1e5
+        mask_keep = numpy.array(numpy.max(xpoly[:,:,0], axis=1) - numpy.min(xpoly[:,:,0], axis=1) < eps)
+        corners=xpoly[mask_keep,:,0:2]
+        datai=data[mask_keep]
+        print(f"Robinson plot: removed {sum(mask_keep==False)} edge polygons")
+    if "proj=ortho" in proj.srs:
+        #remove non-visible points:
+        mask_keep =  numpy.all(numpy.isfinite(xpoly[:,:,0:2]),axis=(1,2))
+        corners = xpoly[mask_keep,:,0:2]
+        datai=data[mask_keep]
+        print(f"Orthogographc plot: removed {sum(mask_keep==False)} non-visable polygons")
+
+
+        # #check for bad cells:
+        # count=0
+        # for i in range(len(mask_keep)):
+        #     if ~mask_keep[i]:
+        #         if clat[i,0] > 10.0:
+        #             print(f"{i} lon values: {clon[i,:]}")
+        #             print(f"{i} lat values: {clat[i,:]}")
+        #             count=count+1
+        #             if count>10: break
+
+
+                    
+        
+    if "proj=lcc" in proj.srs:
+        #remove polygons with  non-finite coords and which are cut by projection
+        eps=40*1e5
+        mask_keep = numpy.array(numpy.max(xpoly[:,:,0], axis=1) - numpy.min(xpoly[:,:,0], axis=1) < eps) & \
+            numpy.all(numpy.isfinite(xpoly),axis=(1,2))
+        corners=xpoly[mask_keep,:,0:2]
+        datai=data[mask_keep]
+        print(f"lcc plot: removed {sum(mask_keep==False)} edge polygons")
+    return corners,datai
+
+
+
+
+
 def interp_to_latlon(data2d,lat,lon,lat_i,lon_i):
     # interpolating in lat/lon space has issues. interpolate in
     # stereographic projection:
@@ -243,6 +314,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_global()
+    elif proj=="robin":
+        plotproj=crs.Robinson(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
     elif proj=="US1":
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
@@ -266,6 +341,14 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         ax.set_extent([50, 110, 0, 60],crs=dataproj)
     elif proj=="oro":
         plotproj=crs.Orthographic(central_longitude=-45.0, central_latitude=45.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
+    elif proj=="oro0":
+        plotproj=crs.Orthographic(central_longitude=0.0, central_latitude=90.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_global()
+    elif proj=="oroSP":
+        plotproj=crs.Orthographic(central_longitude=0.0, central_latitude=-90.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_global()
     elif proj == "europe":
@@ -396,41 +479,26 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
                            transform=dataproj, cmap=cmap)
         
     elif cellbounds:
-        print("MPL polycollection plot using scrip cells")
+        print(f"MPL polycollection plot using {len(clon)} scrip cells")
         from matplotlib.collections import PolyCollection
         # latlon->cartesian->local coords. this will put any seams at plot boundaries
+        # useful when plotproj is also lat/lon like but rotated from original coords
         proj3d=crs.Geocentric()   # for cartesian (x,y,z) representation
         x3d = proj3d.transform_points(dataproj,clon[:,:],clat[:,:])
         # x3d[:,:,0:3] x,y,z coords of 
         ccoords = plotproj.transform_points(proj3d,x3d[:,:,0],x3d[:,:,1],x3d[:,:,2])
-        # ccoords will be [:,:,0:2]  for lat,lon,r but r=0
+        # ccoords will be [:,:,0:3]  for lat,lon,r but r=0
 
-        # better approach: see ../polycollection/plotpoly_mpl.py
-        # for lat/lon & robin, look for cut cells, fix them to +180, and duplicate at -180
-        # for other projections, just mask out points with numpy.isfinite=False
-        # no need to project to 3D first
-        #
+        # remove non-visable and cut polygons:
+        ccoords,data2d=remove_polygons(plotproj,ccoords,data2d,clon,clat)
+                
 
 
-        # remove bad cells:
-        # cells that stradle any coordinate branch cut, or
-        # are non-visible
-        x0=numpy.amin(ccoords[:,:,:],1)
-        x1=numpy.amax(ccoords[:,:,:],1)
-        d= ((x0[:,0]-x1[:,0])**2 + (x0[:,1]-x1[:,1])**2)**0.5
-        dmax=max(d)
-        dmin=min(d)
-        print("projected-cell diameter min,max:",dmin,dmax)
-        xi=(d < 100*dmin)  # and (x1!=numpy.inf) and (y1!=numpy.inf)
-        datai=data2d[xi]
-        print("cells removed: ",len(data2d)-len(datai),"out of",len(data2d))
-        corners=numpy.stack([ccoords[xi,:,0],ccoords[xi,:,1]],axis=2)
-        
         # create cells
         # antialized=False needed to avoid visable cell edges
         # but when combined with alpha/transparancy, cell edges become visiable again
         # due to some issue with how alpha is applied (or not applied) at edges
-        p = PolyCollection(corners,array=datai,edgecolor='none',linewidths=0,antialiased=False)
+        p = PolyCollection(ccoords,array=data2d,edgecolor='none',linewidths=0,antialiased=False)
         p.set_clim([vmin,vmax])
         p.set_cmap(cmap)
         pl=ax.add_collection(p)
@@ -444,12 +512,11 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             if ("proj=eqc" in plotproj.srs) or ("proj=robin" in plotproj.srs):
                 # all polygons always visable
                 tc=tcoords
-                datai=data2d
             else:   # if "proj=ortho" in plotproj.srs:
                 # Triangulation chokes if there are  non-visible points
                 xi=numpy.logical_and ( numpy.isfinite(tcoords[:,0]), numpy.isfinite(tcoords[:,1]))
                 tc=tcoords[xi,:]
-                datai=data2d[xi]  
+                data2d=data2d[xi]  
             # compute triangularization
             # Note that this is different then the polycollection above,
             # and the gll subcell triangles below, because this triangulation
@@ -460,26 +527,27 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             mask=None
         else:
             print("MPL plot using GLL subcell triangulation")
-            datai = data2d
-            tri=mpltri.Triangulation(tcoords[:,0],tcoords[:,1],trigll)
+            #tcoords[npts,0:1]   coords in mapped space
+            #trigll[:,0:2]       index of triangle verticies
+            print(f"number of points={len(tcoords[:,0])} triangles={len(trigll[:,0])}")
+            
+            # for lat/lon type projections, remove cells that are cut at plot edges
+            # for the trigll/tcoords data structure, its too difficult to fix them
+            # like we do with polycollection above
+            # for non global projections, remove non-visable cells
+            xpoly=tcoords[trigll[:,:],0:2]
+            if "proj=eqc" in plotproj.srs:
+                eps=40   # degrees 
+                mask = numpy.array(numpy.max(xpoly[:,:,0], axis=1) - numpy.min(xpoly[:,:,0], axis=1) > eps)
+            elif "proj=robin" in plotproj.srs or "proj=lcc" in plotproj.srs:
+                eps=40*1e5  # seems to work for both Robin and lcc
+                mask = numpy.array(numpy.max(xpoly[:,:,0], axis=1) - numpy.min(xpoly[:,:,0], axis=1) > eps)
+            else:
+                #remove non-visible points:
+                mask =  ~numpy.all(numpy.isfinite(xpoly),axis=(1,2))
 
-            # mask out cut cells, or cells at infinity
-            # better approach - see Polycollection above
-            x0=tcoords[trigll[:,0],0]
-            y0=tcoords[trigll[:,0],1]
-            x1=tcoords[trigll[:,1],0]
-            y1=tcoords[trigll[:,1],1]
-            x2=tcoords[trigll[:,2],0]
-            y2=tcoords[trigll[:,2],1]
-            d=numpy.empty(trigll.shape)
-            d[:,0]=((x0-x1)**2 + (y0-y1)**2)**0.5
-            d[:,1]=((x0-x2)**2 + (y0-y2)**2)**0.5
-            d[:,2]=((x1-x2)**2 + (y1-y2)**2)**0.5
-            dmax=numpy.amax(d,axis=1)
-            gmin=numpy.nanmin(dmax[dmax != numpy.inf])
-            gmax=numpy.nanmax(dmax[dmax != numpy.inf])
-            print("triangle max lengths: ",gmin,gmax)
-            mask = numpy.logical_or( dmax > 270, numpy.isnan(dmax))
+            tri=mpltri.Triangulation(tcoords[:,0],tcoords[:,1],trigll)                         
+            print(f"number of triangles masked out: {sum(mask==1)}")
             tri.set_mask(mask)
             
 
@@ -492,20 +560,20 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
                 vmax=numpy.amax(data2d)
                 print("using data min/max for colormap, min/max=",vmin,vmax)
             print("using tripcolor")
-            pl = ax.tripcolor(tri, datai,vmin=vmin, vmax=vmax,
+            pl = ax.tripcolor(tri, data2d,vmin=vmin, vmax=vmax,
                         shading='gouraud',cmap=cmap,antialiased=False)
         elif contour_opt=='la':
             print("contour lines + area fill")
-            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
-            pl2 = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax, 
+            pl = ax.tricontourf(tri, data2d,levels, vmin=vmin, vmax=vmax,cmap=cmap)
+            pl2 = ax.tricontour(tri, data2d,levels, vmin=vmin, vmax=vmax, 
                                 colors='k',linewidths=.5)
         elif contour_opt=='lo':
             print("contour lines only")
-            pl = ax.tricontour(tri, datai,levels, vmin=vmin, vmax=vmax,
+            pl = ax.tricontour(tri, data2d,levels, vmin=vmin, vmax=vmax,
                                 colors='k',linewidths=.5)
         elif contour_opt=='area':
             print("using contourf (fill only)")
-            pl = ax.tricontourf(tri, datai,levels, vmin=vmin, vmax=vmax,cmap=cmap)
+            pl = ax.tricontourf(tri, data2d,levels, vmin=vmin, vmax=vmax,cmap=cmap)
 
         #ax.triplot(tri,'g-',lw=.1) # plot triangles for debugging
         # as with above, we could put in options for tricontour & tricontourf

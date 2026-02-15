@@ -61,6 +61,8 @@ def plotpoly(xlat,xlon,data,clat,clon,outname=None, title='',
     # transform into desired coordinate system:
     xpoly  = proj.transform_points(ccrs.PlateCarree(), xlon, xlat)
 
+    # NOTE: dont use this code - see newer subroutinized version in
+    # contour/plotutils.py
     # fix and duplicate cut cells
     if "proj=eqc" in proj.srs:
         # duplicate cut polygons on left and right edge of plot

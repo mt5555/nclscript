@@ -8,13 +8,17 @@
 #
 from __future__ import print_function
 import os, numpy
-import  Ngl
+#import  Ngl
 from netCDF4 import Dataset
-from plotutils import mpl_plot, ngl_plot, myargs, extract_level, interp_to_latlon
+from plotutils import mpl_plot, myargs, interp_to_latlon
 from matplotlib import pyplot
+from nglutils import  ngl_plot, ngl_open, ngl_end, ngl_read_colormap, \
+                      extract_level
 
-inname,inname2,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl,scrip_file,gll_file \
+inname,inname2,vertname,varnames,proj,timeindex,klev,plev,clev,nlatlon_interp,use_ngl, \
+scrip_file,gll_file,se_file,contour_opt,coutlines,user_dpi \
     = myargs(os.sys.argv)
+
 
 var1 = varnames[0]
 #var1_read=var1
@@ -54,13 +58,18 @@ if units=="" and hasattr(dataf,"units"):
 ################################################################
 # time dimension and time values to plot
 ################################################################
-timedim =  "time" in dataf.dimensions
+timedim =  "time" in dataf.dimensions or "valid_time" in dataf.dimensions
+if "valid_time" in dataf.dimensions:
+    timename = "valid_time"
+else:
+    timename = "time"
+
 levdim = "lev" in dataf.dimensions or "ilev" in dataf.dimensions
 ntimes=1
 times=numpy.array([0])
 if timedim:
-    ntimes = infile.dimensions['time'].size
-    times = infile.variables["time"][:]
+    ntimes = infile.dimensions[timename].size
+    times = infile.variables[timename][:]
 
 if timeindex==None or timeindex==-1:
     t1=ntimes-1      # last timelevel
@@ -124,21 +133,21 @@ if plev != None:
 
     
 
-wks_type = "pdf"
+
     
 if use_ngl:
+    wks_type = "pdf"
     wks = Ngl.open_wks(wks_type,outname)
-    print("output file: ",outname+"."+wks_type)
+    print("NGL output file: ",outname+"."+wks_type)
     cmap='MPL_viridis'
     if len(clev)==3:
         if clev[1]==-clev[0]:
             cmap='MPL_RdYlBu'
             #cmap="BlueYellowRed"
-
-
 else:
+    wks_type = "png"
     outname=outname+"."+wks_type
-    print("output file: ",outname)
+    print("MPL output file: ",outname)
     cmap='plasma'
     if len(clev)==3:
         if clev[1]==-clev[0]:
@@ -159,6 +168,7 @@ for t in range(t1,t2):
 
     elif (timedim):
         data2d_1=dataf[t,...]
+        data2d_2=dataf2[t,...]
         print(t,"time=",times[t])
     elif (levdim):
         print("k=",klev,"/",nlev_data,"plev=",plev)
@@ -243,8 +253,8 @@ for t in range(t1,t2):
                  proj,clev,cmap,scrip_file)
     else:
         mpl_plot(data2d,lon,lat,title,longname,units,
-                 proj,clev,cmap,gll_file)
-        pyplot.savefig(outname,dpi=300,orientation="portrait")
+                 proj,clev,cmap,scrip_file,gll_file,contour_opt,coutlines)
+        pyplot.savefig(outname,user_dpi=300,orientation="portrait")
         #pyplot.show()
 
 
