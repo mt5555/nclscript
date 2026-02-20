@@ -142,12 +142,12 @@ def shift_anti_meridian_polygons(polygons, eps=40):
     #shift polygons that are split on the anti-meridian for visualization
 
     diff = numpy.array(numpy.max(polygons[:,:,0], axis=1) - numpy.min(polygons[:,:,0], axis=1) > eps)
-    lon_coord_mask = polygons[:,:,0] < eps   # all polygons on left edge
+    lon_coord_mask = polygons[:,:,0] < -180+eps/2   # all polygons on left edge
     lon_coord_mask[~diff,:] = 0              # mask=0 for subset of left polygons which are not cut
     polygons_new=polygons[diff,:,:]            # set of all split polygons
     polygons[lon_coord_mask,0] = polygons[lon_coord_mask,0] + 360
 
-    lon_coord_mask = polygons_new[:,:,0] > eps  # coords on right side
+    lon_coord_mask = polygons_new[:,:,0] > 180-eps/2  # coords on right side
     polygons_new[lon_coord_mask,0] = polygons_new[lon_coord_mask,0] - 360
     # also return polygons_new, and "diff", so we can extract
     # data_new = data[diff] 
@@ -163,10 +163,13 @@ def remove_polygons(proj,xpoly,data, clon, clat):
     #    datai
     if "proj=eqc" in proj.srs:
         # duplicate cut polygons on left and right edge of plot
+        print("calling shift_ani_meridian")
+        print("min lon (should be -180): ",numpy.min(xpoly[:,:,0]))
+        print("max lon (should be  180): ",numpy.max(xpoly[:,:,0]))
         [xpoly_new,mask_new] = shift_anti_meridian_polygons(xpoly)
         corners=numpy.concatenate((xpoly[:,:,0:2],xpoly_new[:,:,0:2]),axis=0)
         datai=numpy.concatenate((data,data[mask_new]),axis=0)
-        print(f"lat/lon plot: adding {len(mask_new)} periodic polygons")
+        print(f"lat/lon plot: adding {numpy.sum(mask_new)} periodic polygons")
     if "proj=robin" in proj.srs:
         # remove all cut polygons
         eps=40*1e5
@@ -339,6 +342,10 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=90.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([50, 110, 0, 60],crs=dataproj)
+    elif proj=="himalaya2":
+        plotproj=crs.PlateCarree(central_longitude=90.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([50-20, 110+20, 0-10, 60+10],crs=dataproj)
     elif proj=="oro":
         plotproj=crs.Orthographic(central_longitude=-45.0, central_latitude=45.0)
         ax = pyplot.axes(projection=plotproj)
@@ -487,9 +494,11 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         x3d = proj3d.transform_points(dataproj,clon[:,:],clat[:,:])
         # x3d[:,:,0:3] x,y,z coords of 
         ccoords = plotproj.transform_points(proj3d,x3d[:,:,0],x3d[:,:,1],x3d[:,:,2])
-        # ccoords will be [:,:,0:3]  for lat,lon,r but r=0
+        # ccoords will be [:,:,0:3]  for lon,lat,r but r=0
 
         # remove non-visable and cut polygons:
+        # for lat/lon projections, requires left edge be -180, which is
+        # achieved by going through the x3d projection above
         ccoords,data2d=remove_polygons(plotproj,ccoords,data2d,clon,clat)
                 
 
@@ -498,10 +507,12 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         # antialized=False needed to avoid visable cell edges
         # but when combined with alpha/transparancy, cell edges become visiable again
         # due to some issue with how alpha is applied (or not applied) at edges
+        print("creating polycollection")
         p = PolyCollection(ccoords,array=data2d,edgecolor='none',linewidths=0,antialiased=False)
         p.set_clim([vmin,vmax])
         p.set_cmap(cmap)
         pl=ax.add_collection(p)
+        print("done with polycollection")
 
     elif True:
         # do the triangulation in the plot coordinates for better results

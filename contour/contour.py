@@ -602,6 +602,7 @@ for t in range(t1,t2):
             mpl_plot(data2d,lon,lat,title,longname,units,
                      proj,clev,cmap,scrip_file,gll_file,contour_opt,coutlines)
         #pyplot.show()
+        print("calling savefig, dpi=",user_dpi)
         pyplot.savefig(outname,dpi=user_dpi,orientation="portrait")
         pyplot.close()
 

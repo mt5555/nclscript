@@ -29,7 +29,6 @@ print('file=',inname)
 print('contour:',var1,'proj=',proj)
 infile = Dataset(inname,"r")
 infile2 = Dataset(inname2,"r")
-outname=inname.split(".nc")[0] + "."+var1+".diff"
 
 
 
@@ -118,12 +117,13 @@ if "ncol_d" in dataf.dimensions:
     lat  = infile.variables["lat_d"][:]
     lon  = infile.variables["lon_d"][:]
     PSname="DYN_PS"
-    ps=infile.variables["DYN_PS"]
+    if PSname in infile.variables.keys():
+        ps=infile.variables["DYN_PS"]
 else:
     lat  = infile.variables["lat"][:]
     lon  = infile.variables["lon"][:]
     PSname="PS"
-    if "PS" in infile.variables.keys():
+    if PSname in infile.variables.keys():
         ps=infile.variables["PS"]
 
 if plev != None:
@@ -131,6 +131,20 @@ if plev != None:
 
 
 
+###########################################
+# construct output name
+###########################################
+outname=inname.split(".nc")[0]
+if proj != 'latlon':
+    outname=outname + "-"+proj
+if timedim and t1!=0:
+    outname=outname + "-t"+str(t1)
+if plev !=None:
+    outname=outname + "-p"+str(round(plev[0]))
+else:
+    if levdim:
+        outname=outname + "-k"+str(klev)
+outname=outname + "."+var1+".diff"
     
 
 
@@ -173,8 +187,10 @@ for t in range(t1,t2):
     elif (levdim):
         print("k=",klev,"/",nlev_data,"plev=",plev)
         data2d_1=extract_level(dataf[...],klev,plev,ps[...],hyam,hybm)
+        data2d_2=extract_level(dataf2[...],klev,plev,ps[...],hyam,hybm)
     else:
         data2d_1=dataf[:]
+        data2d_2=dataf2[:]
 
     if scale:
         data2d_1=data2d*scale
@@ -198,8 +214,27 @@ for t in range(t1,t2):
         tmpd=numpy.amax(abs(data2d))
         print("max norm diff abs,rel=",tmpd,tmpd/tmp1)        
     else:
-        print("unstructured data - add code here to compute l2 norm")
+        if "area" in infile.variables.keys():
+            area=infile.variables["area"]
+            print("computing l2 norm with area from input file")
+        elif os.path.isfile(scrip_file):
+                sfile = Dataset(scrip_file,"r")
+                area  = sfile.variables["grid_area"][:]
+                print("computing l2 norm with area from scrip file")
+        else:
+            print("WARNING: no area variable, L2 norms are unweighted")
+            area = numpy.ones_like(data2d_1)
+        tmp1 = (  numpy.sum(area*data2d_1*data2d_1)/sum(area) )**0.5
+        tmp2 = (  numpy.sum(area*data2d_2*data2d_2)/sum(area) )**0.5
+        tmpd = (  numpy.sum(area*data2d*data2d)/sum(area)  )**0.5
 
+        print("l2 norm data1=",tmp1)
+        print("l2 norm data2=",tmp2)
+        print("l2 norm diff abs,rel=",tmpd,tmpd/tmp1)
+        
+        tmp1=numpy.amax(abs(data2d_1))
+        tmpd=numpy.amax(abs(data2d))
+        print("max norm diff abs,rel=",tmpd,tmpd/tmp1)        
 
   
 
@@ -254,7 +289,9 @@ for t in range(t1,t2):
     else:
         mpl_plot(data2d,lon,lat,title,longname,units,
                  proj,clev,cmap,scrip_file,gll_file,contour_opt,coutlines)
-        pyplot.savefig(outname,user_dpi=300,orientation="portrait")
+        print("calling savefig, dpi=",user_dpi)
+        pyplot.savefig(outname,dpi=user_dpi,orientation="portrait")
+        pyplot.close()
         #pyplot.show()
 
 
