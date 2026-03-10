@@ -334,10 +334,14 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         ax = pyplot.axes(projection=plotproj)
         #ax.set_extent([25, 175, 25, 75],crs=dataproj)
         ax.set_extent([-270, -90, 0, 90],crs=crs.PlateCarree())
-    elif proj=="andes":
+    elif proj=="andes":   #default for topo studies
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-100, -40, -40, 15],crs=dataproj)
+    elif proj=="andes2":  # NA and SA
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-180, -0, -65, 65],crs=dataproj)
     elif proj=="himalaya":
         plotproj=crs.PlateCarree(central_longitude=90.0)
         ax = pyplot.axes(projection=plotproj)
@@ -362,6 +366,14 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
         ax.set_extent([-40, 40, 20, 75],crs=dataproj)
+    elif proj == "debug1":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-95, -45, 5, 55],crs=dataproj)
+    elif proj == "debug2":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        ax.set_extent([-75, -50, 10, 35],crs=dataproj)
     elif proj == "debug3":
         plotproj=crs.PlateCarree(central_longitude=0.0)
         ax = pyplot.axes(projection=plotproj)
@@ -608,7 +620,7 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
     if coutlines==3:
         ax.coastlines(resolution='10m')
         
-    gl=ax.gridlines(linewidth=0.2,alpha=0.5)
+    gl=ax.gridlines(linewidth=0.2,alpha=0.75)
     gl.left_labels = True
     gl.bottom_labels = True
 
