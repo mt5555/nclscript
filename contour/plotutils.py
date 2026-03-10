@@ -182,7 +182,7 @@ def remove_polygons(proj,xpoly,data, clon, clat):
         mask_keep =  numpy.all(numpy.isfinite(xpoly[:,:,0:2]),axis=(1,2))
         corners = xpoly[mask_keep,:,0:2]
         datai=data[mask_keep]
-        print(f"Orthogographc plot: removed {sum(mask_keep==False)} non-visable polygons")
+        print(f"Orthographc plot: removed {sum(mask_keep==False)} non-visable polygons")
 
 
         # #check for bad cells:
@@ -421,6 +421,14 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
         latS = 38.25
         latN = 37.25
         ax.set_extent([lonW, lonE, latS, latN])
+    elif proj == "namerica5":
+        plotproj=crs.PlateCarree(central_longitude=0.0)
+        ax = pyplot.axes(projection=plotproj)
+        lonW = -125.
+        lonE = -95
+        latS = 30.
+        latN = 45.
+        ax.set_extent([lonW, lonE, latS, latN])
     else:
         print("Bad projection argument: ",projection)
         sys.exit(3)
@@ -468,6 +476,11 @@ def mpl_plot(data2d,lon,lat,title,longname,units,proj,clev,cmap,scrip_file,gllfi
             clat=clat*180/numpy.pi
         if clon.shape[0] == len(lat):
             cellbounds=True
+        else:
+            print("mismatch between SCRIP file and coordinate arrays")
+            print("SCRIP cells: ",clon.shape[0])
+            print("lat/lon coords:",len(lat))
+            sys.exit(3)
 
 
     pl2=None
