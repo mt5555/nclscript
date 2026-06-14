@@ -27,16 +27,46 @@ import matplotlib.patches as mpatches
 # CPL and ATM share the same rank range; ATM is drawn on top with a narrower
 # x-extent so both are visible simultaneously.
 # ---------------------------------------------------------------------------
-TOTAL_PROCS = 2419
+TOTAL_PROCS = 4096
+TOTAL_GPUS = 64*4*16   # size each GPU like 64 cores
+
+t_ice1=0
+t_ice2=72.2
+
+t_lnd1=t_ice2
+t_lnd2=t_lnd1 + 3.6
+
+t_ocn1=t_lnd2
+t_ocn2=t_ocn1 + 199.7
+
+t_atm1=t_lnd2
+t_atm2=t_atm1+187.6
+
+t_cpl1 = max(t_atm2,t_ocn2)
+t_cpl2 = t_cpl1 + 106.3
+
+total = 307.2
+if total > t_cpl2:
+  print("Adding other overheads to CPL: original=",t_cpl2," new=",total)
+  t_cpl2=total
+  
+
+c_ocn1=0
+c_ocn2=TOTAL_PROCS-256
+c_atm1=c_ocn2
+c_atm2=c_atm1+256
+
+
+  
 
 components = [
     # name    color          x0     x1           y0    y1
-    ("ICE",  "cyan",          0, TOTAL_PROCS,    0,   356),
-    ("LND",  "#00CC00",       0, TOTAL_PROCS,  356,   375),
-    ("OCN",  "#8888FF",       0, TOTAL_PROCS, 1374,  2312),
-    ("CPL",  "orange",        0, TOTAL_PROCS, 2312,  2419),
+    ("ICE",  "cyan",          0, TOTAL_PROCS, t_ice1,  t_ice2),
+    ("LND",  "#00CC00",       0, TOTAL_PROCS, t_lnd1,  t_lnd2),
+    ("OCN",  "#8888FF",       c_ocn1, c_ocn2, t_ocn1,  t_ocn2),
+    ("CPL",  "orange",        0, TOTAL_PROCS, t_cpl1,  t_cpl2),
     # ATM shares the CPL rank range; its narrower x-width distinguishes it
-    ("ATM",  "#87CEEB",       0,         107, 2312,  2419),
+    ("ATM",  "#87CEEB",       c_atm1,  c_atm2, t_atm1,  t_atm2),
 ]
 
 # ---------------------------------------------------------------------------
@@ -67,15 +97,20 @@ for name, color, x0, x1, y0, y1 in components:
 # ---------------------------------------------------------------------------
 # Axes formatting
 # ---------------------------------------------------------------------------
-ax.set_xlim(0, TOTAL_PROCS)
-ax.set_ylim(0, TOTAL_PROCS)
+ax.set_xlim(0, TOTAL_PROCS+TOTAL_GPUS)
+ax.set_ylim(0, t_cpl2)
 
 # Y-axis ticks match the component boundaries visible in the original plot
-yticks = [0, 356, 375, 1374, 1536, 2312, 2419]
+yticks = [t_ice1, t_ocn1, t_cpl1, t_cpl2]
 ax.set_yticks(yticks)
 ax.set_yticklabels([f"{v:.1f}" for v in yticks])
 
+xticks = [0, 1024, 2048, 3192, 4096]
+ax.set_xticks(xticks)
+ax.set_xticklabels([f"{v:.0f}" for v in xticks])
+
 ax.set_xlabel("Processors#", fontsize=12)
+ax.set_ylabel("Seconds per Model Day", fontsize=12)
 
 ax.tick_params(axis="both", labelsize=10)
 
