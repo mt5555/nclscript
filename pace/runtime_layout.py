@@ -112,18 +112,19 @@ ax.set_xticklabels([f"{v:.0f}" for v in xticks])
 ax.set_xlabel("Processor Cores", fontsize=12)
 ax.set_ylabel("Seconds per Model Day", fontsize=12)
 
-# Top x-axis scaled by GPU_SCALE relative to the bottom axis.
+# Top x-axis: (cores - midpoint) / GPU_SCALE, so the centre of the plot is 0.
+_mid = TOTAL_PROCS / 2
 ax_top = ax.secondary_xaxis(
     "top",
     functions=(
-        lambda cores: cores / GPU_SCALE,
-        lambda gpu_units: gpu_units * GPU_SCALE,
+        lambda cores: (cores - _mid) / GPU_SCALE,
+        lambda gpu_units: gpu_units * GPU_SCALE + _mid,
     ),
 )
-top_ticks = [v / GPU_SCALE for v in [0, 1024, 2048, 3072, 4096]]
+top_ticks = [(v - _mid) / GPU_SCALE for v in [0, 1024, 2048, 3072, 4096]]
 ax_top.set_xticks(top_ticks)
 ax_top.set_xticklabels([f"{v:.0f}" for v in top_ticks])
-ax_top.set_xlabel(f"GPU Units (÷{GPU_SCALE} CPU cores)", fontsize=12)
+ax_top.set_xlabel(f"GPU Units (centred, ÷{GPU_SCALE})", fontsize=12)
 
 ax.tick_params(axis="both", labelsize=10)
 
