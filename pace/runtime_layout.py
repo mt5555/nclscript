@@ -28,6 +28,7 @@ import matplotlib.patches as mpatches
 # x-extent so both are visible simultaneously.
 # ---------------------------------------------------------------------------
 TOTAL_PROCS = 4096
+GPU_SCALE = 4  # number of GPU units per CPU core
 
 t_ice1=0
 t_ice2=72.2
@@ -111,18 +112,18 @@ ax.set_xticklabels([f"{v:.0f}" for v in xticks])
 ax.set_xlabel("Processor Cores", fontsize=12)
 ax.set_ylabel("Seconds per Model Day", fontsize=12)
 
-# Top x-axis in bottom-axis units, starting at 4096.
+# Top x-axis scaled by GPU_SCALE relative to the bottom axis.
 ax_top = ax.secondary_xaxis(
     "top",
     functions=(
-        lambda cores: cores + TOTAL_PROCS,
-        lambda top_units: top_units - TOTAL_PROCS,
+        lambda cores: cores * GPU_SCALE,
+        lambda gpu_units: gpu_units / GPU_SCALE,
     ),
 )
-top_ticks = [4096, 5120, 6144, 7168, 8192]
+top_ticks = [v * GPU_SCALE for v in [0, 1024, 2048, 3072, 4096]]
 ax_top.set_xticks(top_ticks)
 ax_top.set_xticklabels([f"{v:.0f}" for v in top_ticks])
-ax_top.set_xlabel("Processor Cores (+4096 offset)", fontsize=12)
+ax_top.set_xlabel(f"GPU Units (×{GPU_SCALE} CPU cores)", fontsize=12)
 
 ax.tick_params(axis="both", labelsize=10)
 
