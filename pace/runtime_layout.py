@@ -116,14 +116,14 @@ ax.set_ylabel("Seconds per Model Day", fontsize=12)
 ax_top = ax.secondary_xaxis(
     "top",
     functions=(
-        lambda cores: cores * GPU_SCALE,
-        lambda gpu_units: gpu_units / GPU_SCALE,
+        lambda cores: cores / GPU_SCALE,
+        lambda gpu_units: gpu_units * GPU_SCALE,
     ),
 )
-top_ticks = [v * GPU_SCALE for v in [0, 1024, 2048, 3072, 4096]]
+top_ticks = [v / GPU_SCALE for v in [0, 1024, 2048, 3072, 4096]]
 ax_top.set_xticks(top_ticks)
 ax_top.set_xticklabels([f"{v:.0f}" for v in top_ticks])
-ax_top.set_xlabel(f"GPU Units (×{GPU_SCALE} CPU cores)", fontsize=12)
+ax_top.set_xlabel(f"GPU Units (÷{GPU_SCALE} CPU cores)", fontsize=12)
 
 ax.tick_params(axis="both", labelsize=10)
 
