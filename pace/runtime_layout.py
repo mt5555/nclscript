@@ -20,6 +20,7 @@ ATM        | light blue   | 2312 – 2419     | 107 (narrow, drawn over CPL)
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import math
 
 # ---------------------------------------------------------------------------
 # Data: (label, face_color, x_start, x_end, y_start, y_end)
@@ -28,7 +29,8 @@ import matplotlib.patches as mpatches
 # x-extent so both are visible simultaneously.
 # ---------------------------------------------------------------------------
 TOTAL_PROCS = 4096
-GPU_SCALE = 4  # number of GPU units per CPU core
+TOTAL_GPUS = 256
+GPU_SCALE = 24  # number of GPU units per CPU core
 
 t_ice1=0
 t_ice2=72.2
@@ -43,7 +45,7 @@ t_atm1=t_lnd2
 t_atm2=t_atm1+187.6
 
 t_cpl1 = max(t_atm2,t_ocn2)
-t_cpl2 = t_cpl1 + 106.3
+t_cpl2 = t_cpl1 + 21.5
 
 total = 307.2
 if total > t_cpl2:
@@ -54,7 +56,7 @@ if total > t_cpl2:
 c_ocn1=0
 c_ocn2=TOTAL_PROCS-256
 c_atm1=c_ocn2
-c_atm2=c_atm1+256
+c_atm2=c_atm1+256 + 256*GPU_SCALE
 
 
   
@@ -97,7 +99,7 @@ for name, color, x0, x1, y0, y1 in components:
 # ---------------------------------------------------------------------------
 # Axes formatting
 # ---------------------------------------------------------------------------
-ax.set_xlim(0, TOTAL_PROCS)
+ax.set_xlim(0, TOTAL_PROCS + TOTAL_GPUS*GPU_SCALE)
 ax.set_ylim(0, t_cpl2)
 
 # Y-axis ticks match the component boundaries visible in the original plot
@@ -110,10 +112,11 @@ ax.set_xticks(xticks)
 ax.set_xticklabels([f"{v:.0f}" for v in xticks])
 
 ax.set_xlabel("Processor Cores", fontsize=12)
+ax.xaxis.set_label_coords(0.2,-.05)
 ax.set_ylabel("Seconds per Model Day", fontsize=12)
 
 # Top x-axis: (cores - midpoint) / GPU_SCALE, so the centre of the plot is 0.
-_mid = TOTAL_PROCS / 2
+_mid = TOTAL_PROCS
 ax_top = ax.secondary_xaxis(
     "top",
     functions=(
@@ -121,10 +124,10 @@ ax_top = ax.secondary_xaxis(
         lambda gpu_units: gpu_units * GPU_SCALE + _mid,
     ),
 )
-top_ticks = [(v - _mid) / GPU_SCALE for v in [0, 1024, 2048, 3072, 4096]]
+top_ticks = [0, 128, 256]
 ax_top.set_xticks(top_ticks)
 ax_top.set_xticklabels([f"{v:.0f}" for v in top_ticks])
-ax_top.set_xlabel(f"GPU Units (centred, ÷{GPU_SCALE})", fontsize=12)
+ax_top.set_xlabel(f"                                                                   GPUs", fontsize=12)
 
 ax.tick_params(axis="both", labelsize=10)
 
