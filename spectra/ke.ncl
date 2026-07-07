@@ -91,7 +91,7 @@ fnamesPS =  systemfunc( \
 
  
 fnamesU =  systemfunc( \
- "ls ./*.h1.*.latlon.nc; ls held_suarez01.nc " \
+ "ls ./*.h1.*.latlon.nc; ls test.nc " \
  )
  fnamesV=fnamesU;
  fnamesPS=fnamesU;
@@ -193,7 +193,11 @@ end if
 fuv=fall_V[0];    file with u, v
 gauss_grid=get_gridtype(fuv->lat)
 ntimes = dimsizes(fuv->time)
-nlev = dimsizes(fuv->lev)
+if (isfilevar(fuv,"lev")) then
+  nlev = dimsizes(fuv->lev)
+else
+  nlev = 1
+end if
 nlat = dimsizes(fuv->lat)
 nlon = dimsizes(fuv->lon)
 print ("ntimes="+ntimes+" nlev="+nlev+" nlat x nlon "+nlat+"x"+nlon)
@@ -335,7 +339,7 @@ do time=firsttime,lasttime,timeinc
       print ("var2 min/max = "+min(var2(:,:))+", "+max(var2(:,:)) )
 
       vor_grid=gauss_grid
-      KEgrid=0
+      KEgrid=0d0
       if (  useVORDIV  ) then
          ; var = VOR.  var2= DIV
 	 vr=var
