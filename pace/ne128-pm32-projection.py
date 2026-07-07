@@ -175,5 +175,5 @@ ax_top.set_xlabel(f"                                                            
 ax.tick_params(axis="both", labelsize=10)
 
 plt.tight_layout()
-plt.savefig("ne128_estimate.png", dpi=300, bbox_inches="tight")
+plt.savefig("ne128-pm32.png", dpi=300, bbox_inches="tight")
 plt.show()
