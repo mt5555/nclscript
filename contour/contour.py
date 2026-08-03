@@ -331,8 +331,12 @@ if "P0" in psfile.variables.keys():
     ps0=psfile.variables["P0"].getValue()
 
 if "ncol_d" in dimname:
-    lat  = psfile.variables["lat_d"][:]
-    lon  = psfile.variables["lon_d"][:]
+    if "latgll" in psfile.variables.keys():   # eamxx
+        lat  = psfile.variables["latgll"][:]    
+        lon  = psfile.variables["longll"][:]
+    else:
+        lat  = psfile.variables["lat_d"][:]
+        lon  = psfile.variables["lon_d"][:]
     PSname="DYN_PS"
     if "DYN_PS" in psfile.variables.keys():
         ps=psfile.variables["DYN_PS"]
@@ -341,6 +345,9 @@ else:
     if "lat" in psfile.variables.keys():
         lat  = psfile.variables["lat"][:]
         lon  = psfile.variables["lon"][:]
+    elif "latpg2" in psfile.variables.keys():
+        lat  = psfile.variables["latpg2"][:]
+        lon  = psfile.variables["lonpg2"][:]
     else: 
         print("No lat/lon coordinate variables in file, trying SCRIP file:")
         if os.path.isfile(scrip_file):
