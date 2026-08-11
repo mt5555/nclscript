@@ -329,6 +329,8 @@ have_ps=False
 
 if "P0" in psfile.variables.keys():
     ps0=psfile.variables["P0"].getValue()
+else:
+    ps0=1000
 
 if "ncol_d" in dimname:
     if "latgll" in psfile.variables.keys():   # eamxx
